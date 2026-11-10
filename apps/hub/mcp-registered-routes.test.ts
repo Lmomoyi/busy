@@ -140,7 +140,11 @@ vi.mock("@/lib/env", () => ({
 }));
 vi.mock("@/lib/bots/service", () => ({ getBot: h.getBot }));
 vi.mock("@/lib/bot-auth", () => ({ botFromRequest: h.botFromRequest }));
-vi.mock("@/lib/mcp/store", () => ({ withConnection: h.withConnection }));
+vi.mock("@/lib/mcp/store", async (original) => ({
+  hasToolPolicy: (await original<typeof import("@/lib/mcp/store")>())
+    .hasToolPolicy,
+  withConnection: h.withConnection,
+}));
 vi.mock("@/lib/mcp/provider-clients", () => ({
   getProviderClient: h.getProviderClient,
   isRegisteredProvider: (provider: string) =>

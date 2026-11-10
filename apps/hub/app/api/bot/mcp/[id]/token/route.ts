@@ -9,7 +9,7 @@ import {
 } from "@/lib/mcp/oauth";
 import { getProviderClient } from "@/lib/mcp/provider-clients";
 import { freshRegisteredToken } from "@/lib/mcp/registered-oauth";
-import { withConnection } from "@/lib/mcp/store";
+import { hasToolPolicy, withConnection } from "@/lib/mcp/store";
 
 export const maxDuration = 60;
 interface TokenResult {
@@ -47,6 +47,20 @@ export async function GET(
           value: {
             body: { error: "Reconnect this MCP in the marketplace." },
             status: 409,
+          },
+        };
+      }
+      // A raw provider token can call any tool the grant covers. Once the connection has a tool
+      // allowlist, the bot must go through ../proxy, which applies it on every call.
+      if (hasToolPolicy(data)) {
+        return {
+          data,
+          value: {
+            body: {
+              error:
+                "This connection's tools are restricted. Call it through the hub proxy.",
+            },
+            status: 403,
           },
         };
       }

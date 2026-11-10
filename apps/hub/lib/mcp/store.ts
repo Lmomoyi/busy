@@ -232,6 +232,21 @@ function parseMetadata(value: unknown): StoredMcpMetadata | undefined {
   };
 }
 
+/**
+ * True once discovery or a review stamped the connection: from then on its tool allowlist is
+ * enforced ("enforced" mode) and only the hub may hold its provider token. Rows without the stamp
+ * are "legacy" and keep the old approval policy.
+ */
+export function hasToolPolicy(data: McpOAuthData): boolean {
+  const nested = parseMetadata(data.busyMcp);
+  return Boolean(
+    nested?.allowedTools ||
+      nested?.catalogVersion ||
+      nested?.catalogHash ||
+      nested?.reviewedAt
+  );
+}
+
 function metadataFromRow(row: McpConnectionRow): {
   data: McpOAuthData;
   metadata?: StoredMcpMetadata;
@@ -256,7 +271,7 @@ function metadataFromRow(row: McpConnectionRow): {
   const catalogVersion = nested?.catalogVersion;
   const catalogHashValue = nested?.catalogHash;
   const reviewedAt = nested?.reviewedAt;
-  if (!(allowedTools || catalogVersion || catalogHashValue || reviewedAt)) {
+  if (!hasToolPolicy(data)) {
     return { data, metadata: undefined };
   }
   return {

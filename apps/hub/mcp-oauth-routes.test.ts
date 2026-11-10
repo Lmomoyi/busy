@@ -20,6 +20,7 @@ type FakeOAuthData = {
   tokensIssuedAt?: number;
   tokens?: FakeTokens;
   connectIntent?: { token: string; expiresAt: number };
+  busyMcp?: { allowedTools: string[] };
 };
 
 // biome-ignore lint/style/useConsistentTypeDefinitions: test fixture type aliases mirror the external data contracts under test.
@@ -122,7 +123,11 @@ vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
 vi.mock("@/lib/db", () => ({ bots: { id: {}, slug: {} }, db: harness.db }));
 vi.mock("@/lib/bots/service", () => ({ getBot: harness.getBot }));
 vi.mock("@/lib/bot-auth", () => ({ botFromRequest: harness.botFromRequest }));
-vi.mock("@/lib/mcp/store", () => ({ withConnection: harness.withConnection }));
+vi.mock("@/lib/mcp/store", async (original) => ({
+  hasToolPolicy: (await original<typeof import("@/lib/mcp/store")>())
+    .hasToolPolicy,
+  withConnection: harness.withConnection,
+}));
 vi.mock("@/lib/mcp/oauth", () => ({
   finishOAuth: harness.finishOAuth,
   freshToken: harness.freshToken,
@@ -483,6 +488,25 @@ describe("MCP token broker", () => {
     );
     expect(await response.json()).toMatchObject({ token: "access-secret" });
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("refuses a raw token once the connection has a tool allowlist", async () => {
+    installConnectionHarness(
+      { ...connection, status: "connected" },
+      {
+        busyMcp: { allowedTools: ["read_issue"] },
+        redirectOrigin: "https://busy.test",
+      }
+    );
+    const response = await broker(
+      new Request("https://busy.test/api/bot/mcp//token"),
+      tokenParams
+    );
+    expect(response.status).toBe(403);
+    expect(JSON.stringify(await response.json())).not.toContain(
+      "access-secret"
+    );
+    expect(harness.freshToken).not.toHaveBeenCalled();
   });
 
   it("marks terminal expiry as reconnect-required without leaking token errors", async () => {
