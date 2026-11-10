@@ -53,6 +53,15 @@ const token = await ask("Vercel token for this Vercel team (hidden): ", true);
 if (!token) {
   throw new Error("A Vercel token is required to deploy and manage bots");
 }
+const botBaseImage = await ask(
+  "BOT_BASE_IMAGE from images/bot-base/push.sh, or Enter if not published yet: "
+);
+// Same rule as the hub (lib/bots/service.ts): bots only deploy from a digest-pinned image.
+if (botBaseImage && !/@sha256:[a-f0-9]{64}$/u.test(botBaseImage)) {
+  throw new Error(
+    "BOT_BASE_IMAGE must end in @sha256:<64 hex>. See docs/bot-base-image.md"
+  );
+}
 const tokenPass = await ask(
   "Token Pass key, or Enter to use AI Gateway: ",
   true
@@ -69,7 +78,15 @@ setEnv("CRON_SECRET", randomBytes(32).toString("base64url"), ["production"]);
 if (token) {
   setEnv("VERCEL_TOKEN", token, both);
 }
+if (botBaseImage) {
+  setEnv("BOT_BASE_IMAGE", botBaseImage, both);
+}
 if (tokenPass) {
   setEnv("TOKEN_PASS_API_KEY", tokenPass, both);
+}
+if (!botBaseImage) {
+  console.log(
+    "\n! BOT_BASE_IMAGE is not set: bots cannot deploy until you publish your image and set it (docs/bot-base-image.md)."
+  );
 }
 console.log("\nDone. Redeploy the linked hub project to apply these values.");

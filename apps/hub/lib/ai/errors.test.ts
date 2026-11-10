@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { envSetupMessage } from "../env";
 import {
   aiIssue,
   aiIssueFromResponse,
   aiIssueGuidance,
   issueFromProviderStatus,
   issueResponse,
+  PROJECT_MISMATCH,
+  sanitizeAiMessage,
 } from "./errors";
 
 describe("AI public issues", () => {
@@ -104,5 +107,17 @@ describe("AI public issues", () => {
       code: "provider_unconfigured",
       provider: "token-pass",
     });
+  });
+});
+
+describe("sanitizeAiMessage", () => {
+  it("shows the hub setting to fix and the project mismatch, hides anything else", () => {
+    expect(sanitizeAiMessage(envSetupMessage("BOT_BASE_IMAGE"))).toBe(
+      envSetupMessage("BOT_BASE_IMAGE")
+    );
+    expect(sanitizeAiMessage(PROJECT_MISMATCH)).toBe(PROJECT_MISMATCH);
+    expect(
+      sanitizeAiMessage("The hub has no valid sk-secret setting. Set it")
+    ).toBe("Busy could not deploy this bot.");
   });
 });

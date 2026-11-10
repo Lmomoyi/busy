@@ -1,11 +1,16 @@
 import { setTimeout } from "node:timers/promises";
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { AiIssueError, aiIssue, sanitizeAiMessage } from "../ai/errors";
+import {
+  AiIssueError,
+  aiIssue,
+  PROJECT_MISMATCH,
+  sanitizeAiMessage,
+} from "../ai/errors";
 import { replaceMainSession } from "../chat/session";
 import { botCall } from "../chat/store";
 import { type BotRow, bots, db } from "../db";
-import { need } from "../env";
+import { EnvError, envSetupMessage, need } from "../env";
 import { prewarmSession } from "../eve/client";
 import { hubPublicKey } from "../hub-token";
 import {
@@ -31,7 +36,6 @@ import {
   DEPLOY_UNCONFIRMED,
   type DeployDeps,
   type DeploySettings,
-  PROJECT_MISMATCH,
   PROMOTION_LEASE_MS,
   promotionAction,
   refreshStatus,
@@ -95,7 +99,10 @@ export const billingFits = (bot: Pick<BotRow, "billing" | "model">) => {
 function settings(): DeploySettings {
   const botBaseImage = need("BOT_BASE_IMAGE");
   if (!BOT_BASE_IMAGE_RE.test(botBaseImage)) {
-    throw new Error("BOT_BASE_IMAGE must be a digest-pinned image reference");
+    throw new EnvError(
+      "BOT_BASE_IMAGE",
+      "BOT_BASE_IMAGE must be a digest-pinned image reference"
+    );
   }
   return {
     botBaseImage,
@@ -378,7 +385,7 @@ export async function deployBot(
     // Lost to a newer generation (or another run of this one): this deployment is never promoted.
     return row ? "started" : "stale";
   } catch (e) {
-    // The bot shows a generic message; the cause stays in the logs.
+    // The bot shows a generic message, or the hub setting to fix; the cause stays in the logs.
     console.error("deploy start failed", {
       botId: target.botId,
       error: e instanceof Error ? e.message : String(e),
@@ -386,6 +393,8 @@ export async function deployBot(
     let { message } = aiIssue("deployment_failed", bot.billing);
     if (e instanceof AiIssueError) {
       ({ message } = e.issue);
+    } else if (e instanceof EnvError) {
+      message = envSetupMessage(e.key);
     } else if (projectTaken(e)) {
       message = PROJECT_MISMATCH;
     }

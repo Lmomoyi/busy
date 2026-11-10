@@ -9,11 +9,11 @@ import {
   it,
   vi,
 } from "vitest";
+import { PROJECT_MISMATCH } from "./lib/ai/errors";
 import {
   DEPLOY_DEADLINE_MS,
   DEPLOY_TIMED_OUT,
   DEPLOY_UNCONFIRMED,
-  PROJECT_MISMATCH,
 } from "./lib/bots/deploy";
 import {
   type BotsDatabase,

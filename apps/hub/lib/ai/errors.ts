@@ -1,4 +1,8 @@
 import type { Billing } from "../bots/models";
+import { ENV_SETUP_MESSAGE_RE } from "../env";
+
+export const PROJECT_MISMATCH =
+  "This bot's Vercel project changed. Ask the Busy account owner to repair it.";
 
 /** Stable, public error codes shared by AI settings, connection and inference routes. */
 export type AiIssueCode =
@@ -589,7 +593,11 @@ export function sanitizeAiMessage(
   if (typeof value !== "string") {
     return fallback;
   }
-  if (value === "The deploy failed. Check the build in Vercel.") {
+  if (
+    value === "The deploy failed. Check the build in Vercel." ||
+    value === PROJECT_MISMATCH ||
+    ENV_SETUP_MESSAGE_RE.test(value)
+  ) {
     return value;
   }
   const providers: AiIssueProvider[] = [

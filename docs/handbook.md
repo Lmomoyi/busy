@@ -395,7 +395,8 @@ pnpm exec node scripts/gen-hub-key.ts
 ```
 
 The first script asks for an application username, password of at least 12
-characters, a token for your Vercel team and an optional Token Pass key. It
+characters, a token for your Vercel team, your `BOT_BASE_IMAGE` (Enter skips
+it until you publish the image in step 4) and an optional Token Pass key. It
 writes password hashes and generated secrets through CLI stdin, using
 different session secrets for development and production. The key script
 creates a sensitive production ES256 signing key and prints only its public
@@ -735,7 +736,7 @@ before expecting project-specific checks to pass.
 | Login returns a database error | Correct database URL, completed `db:init`, reachable Postgres and literal password hash. |
 | `db:init` refuses the target | It already has public relations. Use an empty database or the upgrade/migration procedure. |
 | Login works locally but bots fail | Complete cloud/image/model configuration; local UI operation is only one layer. |
-| Bot deployment reports missing `BOT_BASE_IMAGE` | Publish your image, configure the digest on the Hub and check registry access for bot projects. |
+| Bot shows "The hub has no valid `BOT_BASE_IMAGE` setting" | Publish your image, configure the digest on the Hub, redeploy the Hub and check registry access for bot projects. The same message names any other missing Hub setting. |
 | Bot deploy/build fails | Inspect that bot project's build log, template lockfile, image/tool versions and prewarm check. |
 | File upload or library access fails | Private Blob store, correct token/environment and authenticated application route. |
 | A model is unavailable | Select an available connection/model in Settings; verify your provider's quota and permissions. |

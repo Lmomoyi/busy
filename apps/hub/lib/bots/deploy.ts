@@ -1,4 +1,4 @@
-import { AiIssueError, aiIssue } from "../ai/errors";
+import { AiIssueError, aiIssue, PROJECT_MISMATCH } from "../ai/errors";
 import { gatewaySupportsFast } from "../ai/gateway-models";
 import type { BotRow } from "../db/schema";
 import type { DeploymentState, PromotionStatus } from "../vercel/client";
@@ -56,8 +56,6 @@ export function traceSampleRate(value: string | undefined): number {
 }
 
 /** The bot's linked project and the one named `bot-<slug>` today are different projects. */
-export const PROJECT_MISMATCH =
-  "This bot's Vercel project changed. Ask the Busy account owner to repair it.";
 
 /**
  * Every step is idempotent, so a failed or repeated deploy just runs again (plan task 7). The

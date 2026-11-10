@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { PROJECT_MISMATCH } from "../ai/errors";
 import {
   type DeployDeps,
-  PROJECT_MISMATCH,
   PROMOTION_LEASE_MS,
   promotionAction,
   refreshStatus,
