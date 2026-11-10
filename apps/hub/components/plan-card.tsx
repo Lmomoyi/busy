@@ -1,4 +1,22 @@
-import { AlertTriangle, Check, Circle, Clock3, Pause, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Circle,
+  Clock3,
+  Pause,
+  Route,
+  X,
+} from "lucide-react";
+import {
+  Trace,
+  TraceCollapsible,
+  TraceCollapsibleContent,
+  TraceCollapsibleTrigger,
+  TraceDescription,
+  TraceIcon,
+  TraceLine,
+  TraceTitle,
+} from "@/components/ui/trace";
 import {
   type PlanStep,
   planStatus,
@@ -17,25 +35,35 @@ const states = {
 function PlanStepRow({ step, paused }: { step: PlanStep; paused?: boolean }) {
   const { icon: Icon, label } = states[step.status];
   const stateLabel = paused && step.status === "in_progress" ? "Paused" : label;
+  let status: "running" | "error" | "pending" | undefined;
+  if (step.status === "in_progress" && !paused) {
+    status = "running";
+  } else if (step.status === "failed") {
+    status = "error";
+  } else if (step.status === "pending") {
+    status = "pending";
+  }
   return (
-    <li className="flex gap-2.5">
-      <Icon
-        aria-hidden="true"
-        className="text-muted-foreground mt-1 size-3.5 shrink-0"
-      />
-      <div className="min-w-0 space-y-1">
-        <p className="text-sm font-medium break-words">{step.title}</p>
-        <p className="text-muted-foreground text-xs break-words">
-          {stateLabel} · {step.assignee === "self" ? "This bot" : step.assignee}
-        </p>
-        <p className="text-muted-foreground text-sm break-words">
-          {step.note ?? step.expectedResult}
-        </p>
-      </div>
+    <li className="flex min-w-0 flex-col gap-0.5">
+      <TraceLine status={status}>
+        <TraceIcon>
+          <Icon />
+        </TraceIcon>
+        <TraceTitle className="text-foreground whitespace-normal">
+          {step.title}
+        </TraceTitle>
+      </TraceLine>
+      <p className="text-muted-foreground pl-6 text-xs break-words">
+        {stateLabel} · {step.assignee === "self" ? "This bot" : step.assignee}
+      </p>
+      <p className="text-muted-foreground pl-6 text-sm break-words">
+        {step.note ?? step.expectedResult}
+      </p>
     </li>
   );
 }
 
+/** The Plan pattern from shadcn/ui's AI Elements: a Trace that opens into its steps. */
 export function PlanCard({
   plan,
   paused,
@@ -48,25 +76,37 @@ export function PlanCard({
   ).length;
   const status = planStatus(plan);
   const failed = plan.steps.some((step) => step.status === "failed");
+  const running =
+    status === "active" &&
+    !paused &&
+    plan.steps.some((step) => step.status === "in_progress");
   return (
-    <details
-      className="border-border w-full max-w-xl rounded-lg border px-4 py-3"
-      open
-    >
-      <summary className="cursor-pointer text-sm font-medium break-words">
-        {plan.title}
-        <span className="text-muted-foreground ml-2 text-xs font-normal">
-          {completed}/{plan.steps.length} completed
-          {status === "cancelled" ? " · Cancelled" : ""}
-          {failed ? " · Needs attention" : ""}
-          {paused && status === "active" ? " · Paused" : ""}
-        </span>
-      </summary>
-      <ol aria-label="Plan steps" className="mt-4 space-y-4">
-        {plan.steps.map((step) => (
-          <PlanStepRow key={step.id} paused={paused} step={step} />
-        ))}
-      </ol>
-    </details>
+    <Trace className="max-w-xl">
+      <TraceCollapsible defaultOpen>
+        <TraceCollapsibleTrigger>
+          <TraceLine status={running ? "running" : undefined}>
+            <TraceIcon>
+              <Route />
+            </TraceIcon>
+            <TraceTitle className="text-foreground font-medium">
+              {plan.title}
+            </TraceTitle>
+            <TraceDescription>
+              {completed}/{plan.steps.length} completed
+              {status === "cancelled" ? " · Cancelled" : ""}
+              {failed ? " · Needs attention" : ""}
+              {paused && status === "active" ? " · Paused" : ""}
+            </TraceDescription>
+          </TraceLine>
+        </TraceCollapsibleTrigger>
+        <TraceCollapsibleContent>
+          <ol aria-label="Plan steps" className="flex flex-col gap-3">
+            {plan.steps.map((step) => (
+              <PlanStepRow key={step.id} paused={paused} step={step} />
+            ))}
+          </ol>
+        </TraceCollapsibleContent>
+      </TraceCollapsible>
+    </Trace>
   );
 }

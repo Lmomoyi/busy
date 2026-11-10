@@ -173,6 +173,21 @@ describe("MCP marketplace routes", () => {
     expect(JSON.stringify(body)).not.toContain("clientSecret");
   });
 
+  it("lists the catalogue when a provider's stored credentials can't be read", async () => {
+    // A hub whose SESSION_SECRET differs from the one that sealed them, such as a local hub.
+    mocks.getProviderClient.mockImplementation((provider: string) =>
+      provider === "github"
+        ? Promise.reject(new Error("Stored provider credentials are invalid"))
+        : Promise.resolve(null)
+    );
+    const response = await getMarketplace();
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(
+      body.catalog.find((entry: { id: string }) => entry.id === "github")
+    ).toMatchObject({ configured: false });
+  });
+
   it("rejects a registered MCP before creating a row when its provider client is not configured", async () => {
     const response = await postMarketplace(
       jsonRequest({ catalogId: "github" })

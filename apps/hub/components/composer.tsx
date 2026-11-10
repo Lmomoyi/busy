@@ -16,6 +16,21 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useStore } from "@/components/chat-app";
+import {
+  AttachmentAction,
+  AttachmentActions,
+  Attachment as AttachmentChip,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 import { SECOND_OPINION_COMMAND } from "@/lib/firesides/types";
 import { cn } from "@/lib/utils";
 
@@ -287,119 +302,129 @@ export const Composer = memo(function ChatComposer({
 
   return (
     <div className="relative shrink-0 px-6 pb-5">
-      <form
-        className="border-input bg-card mx-auto flex w-full flex-col gap-2 rounded-2xl border px-3 py-2 transition-colors"
-        onSubmit={handleSubmit}
-      >
-        {attachments.items.length ? (
-          <ul className="flex flex-wrap gap-1.5 pt-1">
-            {attachments.items.map((a) => (
-              <li
-                className={cn(
-                  "bg-secondary flex items-center gap-1.5 rounded-md py-1 pr-1 pl-2.5 text-[13px]",
-                  a.status === "error" && "text-destructive"
-                )}
-                key={a.localId}
-              >
-                {a.status === "uploading" ? (
-                  <Loader2
-                    aria-hidden="true"
-                    className="size-3.5 animate-spin"
-                  />
-                ) : null}
-                <span className="max-w-48 truncate">{a.name}</span>
-                {a.status === "error" ? <span>{"couldn't upload"}</span> : null}
-                <button
-                  aria-label={`Remove ${a.name}`}
-                  className="text-muted-foreground hover:text-foreground rounded-sm p-0.5"
-                  data-local-id={a.localId}
-                  onClick={handleRemove}
-                  type="button"
+      <form className="mx-auto w-full" onSubmit={handleSubmit}>
+        <InputGroup className="bg-card dark:bg-card">
+          {attachments.items.length ? (
+            <InputGroupAddon align="block-start" className="flex-wrap">
+              {attachments.items.map((a) => (
+                <AttachmentChip
+                  key={a.localId}
+                  size="sm"
+                  state={a.status === "ready" ? "done" : a.status}
                 >
-                  <X aria-hidden="true" className="size-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <label className="sr-only" htmlFor={`composer-${slug}`}>
-          Message
-        </label>
-        <textarea
-          className="placeholder:text-muted-foreground [field-sizing:content] max-h-48 min-h-6 w-full resize-none bg-transparent px-1 py-1.5 text-base leading-6 outline-none sm:text-[15px]"
-          defaultValue=""
-          id={`composer-${slug}`}
-          onChange={handleTextChange}
-          onFocus={handleFocus}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder="Write a message"
-          ref={message}
-          rows={1}
-        />
-        <div className="flex items-center justify-between">
-          <input
-            hidden
-            multiple
-            onChange={handleFilesChange}
-            ref={input}
-            type="file"
+                  <AttachmentMedia>
+                    {a.status === "uploading" ? (
+                      <Loader2 aria-hidden="true" className="animate-spin" />
+                    ) : (
+                      <Paperclip aria-hidden="true" />
+                    )}
+                  </AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle
+                      className={cn(
+                        "max-w-48",
+                        a.status === "error" && "text-destructive"
+                      )}
+                    >
+                      {a.name}
+                    </AttachmentTitle>
+                    {a.status === "error" ? (
+                      <AttachmentDescription className="text-destructive">
+                        {"couldn't upload"}
+                      </AttachmentDescription>
+                    ) : null}
+                  </AttachmentContent>
+                  <AttachmentActions>
+                    <AttachmentAction
+                      aria-label={`Remove ${a.name}`}
+                      data-local-id={a.localId}
+                      onClick={handleRemove}
+                    >
+                      <X aria-hidden="true" />
+                    </AttachmentAction>
+                  </AttachmentActions>
+                </AttachmentChip>
+              ))}
+            </InputGroupAddon>
+          ) : null}
+          <label className="sr-only" htmlFor={`composer-${slug}`}>
+            Message
+          </label>
+          <InputGroupTextarea
+            className="max-h-48 min-h-6 px-4 pt-3 pb-1 text-base leading-6 sm:text-[15px]"
+            defaultValue=""
+            id={`composer-${slug}`}
+            onChange={handleTextChange}
+            onFocus={handleFocus}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder="Write a message"
+            ref={message}
+            rows={1}
           />
-          <button
-            aria-label="Attach files"
-            className="text-muted-foreground hover:bg-accent hover:text-foreground grid size-8 place-items-center rounded-full transition-colors"
-            onClick={handleAttachClick}
-            type="button"
-          >
-            <Paperclip aria-hidden="true" className="size-4" />
-          </button>
-          <div className="flex items-center gap-1">
+          <InputGroupAddon align="block-end">
+            <input
+              hidden
+              multiple
+              onChange={handleFilesChange}
+              ref={input}
+              type="file"
+            />
+            <InputGroupButton
+              aria-label="Attach files"
+              onClick={handleAttachClick}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <Paperclip aria-hidden="true" />
+            </InputGroupButton>
             {canDictate ? (
-              <button
+              <InputGroupButton
                 aria-label={listening ? "Stop dictating" : "Dictate"}
                 className={cn(
-                  "text-muted-foreground hover:bg-accent hover:text-foreground grid size-8 place-items-center rounded-full transition-colors",
+                  "ml-auto",
                   listening &&
                     "bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
                 )}
                 onClick={dictate}
-                type="button"
+                size="icon-sm"
+                variant="ghost"
               >
                 <Mic
                   aria-hidden="true"
-                  className={cn("size-4", listening && "animate-pulse")}
+                  className={cn(listening && "animate-pulse")}
                 />
-              </button>
+              </InputGroupButton>
             ) : null}
             {working && !canSend && turnId ? (
-              <button
+              <InputGroupButton
                 aria-label={isStopping ? "Stopping…" : "Stop"}
-                className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-full transition-opacity hover:opacity-90 disabled:opacity-60"
+                className={cn(!canDictate && "ml-auto")}
                 disabled={isStopping}
                 onClick={handleStop}
-                type="button"
+                size="icon-sm"
+                variant="default"
               >
                 {isStopping ? (
-                  <Loader2
-                    aria-hidden="true"
-                    className="size-3.5 animate-spin"
-                  />
+                  <Loader2 aria-hidden="true" className="animate-spin" />
                 ) : (
                   <Square aria-hidden="true" className="size-3 fill-current" />
                 )}
-              </button>
+              </InputGroupButton>
             ) : (
-              <button
+              <InputGroupButton
                 aria-label="Send"
-                className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-full transition-opacity hover:opacity-90 disabled:opacity-30"
+                className={cn(!canDictate && "ml-auto")}
                 disabled={!canSend}
+                size="icon-sm"
                 type="submit"
+                variant="default"
               >
-                <ArrowUp aria-hidden="true" className="size-4" />
-              </button>
+                <ArrowUp aria-hidden="true" />
+              </InputGroupButton>
             )}
-          </div>
-        </div>
+          </InputGroupAddon>
+        </InputGroup>
       </form>
     </div>
   );

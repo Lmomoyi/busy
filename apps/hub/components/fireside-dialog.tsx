@@ -21,6 +21,12 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
 import type { ChatItem } from "@/lib/chat/items";
 import type {
   FiresideCommand,
@@ -502,44 +508,47 @@ function FiresideComposer({
   );
   return (
     <form
-      className="border-input bg-card mx-6 mb-5 flex flex-col gap-2 rounded-2xl border px-3 py-2 sm:mx-auto sm:w-[calc(100%-3rem)] sm:max-w-[712px]"
+      className="mx-6 mb-5 sm:mx-auto sm:w-[calc(100%-3rem)] sm:max-w-[712px]"
       onSubmit={submit}
     >
-      <label className="sr-only" htmlFor="fireside-message">
-        Message
-      </label>
-      <textarea
-        className="placeholder:text-muted-foreground [field-sizing:content] max-h-40 min-h-6 w-full resize-none bg-transparent px-1 py-1.5 text-base leading-6 outline-none sm:text-[15px]"
-        disabled={disabled}
-        id="fireside-message"
-        onChange={change}
-        onKeyDown={keyDown}
-        placeholder="Write a message"
-        rows={1}
-        value={text}
-      />
-      <div className="flex justify-end">
-        {working && !text.trim() ? (
-          <button
-            aria-label="Stop"
-            className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-full disabled:opacity-30"
-            disabled={disabled}
-            onClick={onPause}
-            type="button"
-          >
-            <Square aria-hidden="true" className="size-3 fill-current" />
-          </button>
-        ) : (
-          <button
-            aria-label="Send"
-            className="bg-primary text-primary-foreground grid size-8 place-items-center rounded-full disabled:opacity-30"
-            disabled={disabled || !text.trim()}
-            type="submit"
-          >
-            <ArrowUp aria-hidden="true" className="size-4" />
-          </button>
-        )}
-      </div>
+      <InputGroup className="bg-card dark:bg-card">
+        <label className="sr-only" htmlFor="fireside-message">
+          Message
+        </label>
+        <InputGroupTextarea
+          className="max-h-40 min-h-6 px-4 pt-3 pb-1 text-base leading-6 sm:text-[15px]"
+          disabled={disabled}
+          id="fireside-message"
+          onChange={change}
+          onKeyDown={keyDown}
+          placeholder="Write a message"
+          rows={1}
+          value={text}
+        />
+        <InputGroupAddon align="block-end" className="justify-end">
+          {working && !text.trim() ? (
+            <InputGroupButton
+              aria-label="Stop"
+              disabled={disabled}
+              onClick={onPause}
+              size="icon-sm"
+              variant="default"
+            >
+              <Square aria-hidden="true" className="size-3 fill-current" />
+            </InputGroupButton>
+          ) : (
+            <InputGroupButton
+              aria-label="Send"
+              disabled={disabled || !text.trim()}
+              size="icon-sm"
+              type="submit"
+              variant="default"
+            >
+              <ArrowUp aria-hidden="true" />
+            </InputGroupButton>
+          )}
+        </InputGroupAddon>
+      </InputGroup>
     </form>
   );
 }

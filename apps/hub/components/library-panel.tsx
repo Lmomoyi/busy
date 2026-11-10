@@ -12,7 +12,17 @@ import {
   Presentation,
   Video,
 } from "lucide-react";
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import {
+  type ChangeEvent,
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import {
+  FilePreviewDialog,
+  previewKind,
+} from "@/components/file-preview-dialog";
 import { Button } from "@/components/ui/button";
 import type {
   LibraryFile,
@@ -65,6 +75,19 @@ function FileIcon({ contentType }: { contentType: string }) {
 
 export function LibraryResults({ slug }: { slug: string }) {
   const [files, setFiles] = useState<LibraryFile[]>([]);
+  const [preview, setPreview] = useState<LibraryFile | null>(null);
+  const openPreview = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const { id } = event.currentTarget.dataset;
+      setPreview(files.find((file) => file.id === id) ?? null);
+    },
+    [files]
+  );
+  const closePreview = useCallback((open: boolean) => {
+    if (!open) {
+      setPreview(null);
+    }
+  }, []);
   const [source, setSource] = useState<LibraryFileSource | "all">("all");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -177,14 +200,26 @@ export function LibraryResults({ slug }: { slug: string }) {
               >
                 <FileIcon contentType={file.contentType} />
                 <div className="min-w-0 flex-1">
-                  <a
-                    className="block max-w-full truncate rounded-sm text-left text-sm font-medium hover:underline"
-                    download={file.name}
-                    href={downloadUrl}
-                    title={file.name}
-                  >
-                    {file.name}
-                  </a>
+                  {previewKind(file) ? (
+                    <button
+                      className="block max-w-full truncate rounded-sm text-left text-sm font-medium hover:underline"
+                      data-id={file.id}
+                      onClick={openPreview}
+                      title={file.name}
+                      type="button"
+                    >
+                      {file.name}
+                    </button>
+                  ) : (
+                    <a
+                      className="block max-w-full truncate rounded-sm text-left text-sm font-medium hover:underline"
+                      download={file.name}
+                      href={downloadUrl}
+                      title={file.name}
+                    >
+                      {file.name}
+                    </a>
+                  )}
                   <div className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                     <span className="tabular-nums">{fileSize(file.size)}</span>
                     {file.source === "user" ? (
@@ -270,6 +305,7 @@ export function LibraryResults({ slug }: { slug: string }) {
           </Button>
         </div>
       ) : null}
+      <FilePreviewDialog file={preview} onOpenChange={closePreview} />
     </>
   );
 }

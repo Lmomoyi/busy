@@ -5,10 +5,18 @@ import { useEffect, useRef, useState } from "react";
 /**
  * The first page of a PDF, drawn with pdf.js. Not an <iframe>: Blob serves files as attachments, so
  * an iframe stays blank and iOS offers to download the PDF every time the chat renders. Drawn only
- * once it scrolls into view; tapping it opens the whole PDF.
+ * once it scrolls into view; tapping it opens the whole PDF in the preview modal.
  */
-export function PdfPreview({ src, name }: { src: string; name: string }) {
-  const box = useRef<HTMLAnchorElement>(null);
+export function PdfPreview({
+  src,
+  name,
+  onOpen,
+}: {
+  src: string;
+  name: string;
+  onOpen: () => void;
+}) {
+  const box = useRef<HTMLButtonElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [state, setState] = useState<"waiting" | "ready" | "error">("waiting");
 
@@ -61,13 +69,12 @@ export function PdfPreview({ src, name }: { src: string; name: string }) {
     return null;
   }
   return (
-    <a
+    <button
       aria-label={`Open ${name}`}
-      className="block bg-white"
-      href={src}
+      className="block w-full cursor-zoom-in bg-white"
+      onClick={onOpen}
       ref={box}
-      rel="noreferrer"
-      target="_blank"
+      type="button"
     >
       <canvas
         aria-label={`Preview of ${name}`}
@@ -79,6 +86,6 @@ export function PdfPreview({ src, name }: { src: string; name: string }) {
       {state === "waiting" ? (
         <span className="bg-muted block aspect-[1/1.414] w-full animate-pulse" />
       ) : null}
-    </a>
+    </button>
   );
 }

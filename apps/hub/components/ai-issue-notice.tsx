@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlert } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -12,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { type AiIssue, aiIssueGuidance } from "@/lib/ai/errors";
 
 const AiConnectionSettings = dynamic(
@@ -57,14 +65,23 @@ export function AiIssueNotice({
 
   return (
     <div className="flex flex-col items-start gap-2 text-sm">
-      <div className="text-destructive" role="alert">
-        <p>{issue.message}</p>
-        <p>
-          {modelIssue && modelSettings === "account"
-            ? "Choose another model in AI connection settings."
-            : aiIssueGuidance(issue)}
-        </p>
-      </div>
+      <Item
+        className="border-destructive/30 max-w-md"
+        size="sm"
+        variant="outline"
+      >
+        <ItemMedia className="text-destructive" variant="icon">
+          <CircleAlert aria-hidden="true" />
+        </ItemMedia>
+        <ItemContent role="alert">
+          <ItemTitle className="text-destructive">{issue.message}</ItemTitle>
+          <ItemDescription className="line-clamp-none">
+            {modelIssue && modelSettings === "account"
+              ? "Choose another model in AI connection settings."
+              : aiIssueGuidance(issue)}
+          </ItemDescription>
+        </ItemContent>
+      </Item>
       {issue.code === "unauthorized" ? (
         <Link
           className="underline underline-offset-4"

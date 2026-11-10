@@ -9,6 +9,7 @@ import {
   FLOW_PATH,
   flowCookie,
   mcpJson,
+  requestOrigin,
   resultPath,
   safeReturnTo,
 } from "@/lib/mcp/http";
@@ -68,7 +69,8 @@ export async function completeMcpCallback(
   registeredProvider?: RegisteredProvider,
   cimdProvider?: "vercel"
 ) {
-  const { origin, searchParams } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
+  const origin = requestOrigin(req);
   const providerKind = callbackProvider(registeredProvider, cimdProvider);
   if (registeredProvider || cimdProvider) {
     try {

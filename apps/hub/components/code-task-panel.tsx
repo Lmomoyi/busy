@@ -26,7 +26,6 @@ import {
 } from "@/components/code-task-activity";
 import { CodeTaskChanges } from "@/components/code-task-changes";
 import { CodeTaskUsage } from "@/components/code-task-usage";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +33,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from "@/components/ui/input-group";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { useCodeTask } from "@/components/use-code-task";
 import type {
   CodeTaskStatus,
@@ -133,39 +145,41 @@ export function CodeTaskSummaryCard({
     [onOpen]
   );
   return (
-    <button
-      className="group border-border bg-card/40 hover:border-foreground/20 hover:bg-muted/40 focus-visible:ring-ring focus-visible:ring-offset-background block w-full border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
-      data-task-id={task.id}
-      onClick={handleOpen}
-      title={task.title}
-      type="button"
+    <Item
+      render={
+        <button
+          data-task-id={task.id}
+          onClick={handleOpen}
+          title={task.title}
+          type="button"
+        />
+      }
+      variant="outline"
     >
-      <span className="flex items-center justify-between gap-4 text-xs">
-        <span className="text-muted-foreground inline-flex items-center gap-1.5">
-          <Code2 aria-hidden="true" className="size-3.5" />
-          Code task
-        </span>
+      <ItemMedia variant="icon">
+        <Code2 aria-hidden="true" />
+      </ItemMedia>
+      <ItemContent className="text-left">
+        <ItemDescription className="text-xs">Code task</ItemDescription>
+        <ItemTitle className="line-clamp-2">{task.title}</ItemTitle>
+        <ItemDescription className="truncate font-mono text-[11px]">
+          {task.repository.fullName}
+          {task.phase ? ` · ${task.phase}` : ""}
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions className="flex-col items-end gap-1 text-xs">
         <span
           className={`inline-flex shrink-0 items-center gap-1.5 ${summaryStatusClass[task.status]}`}
         >
           <StatusMark status={task.status} />
           {statusLabel[task.status]}
         </span>
-      </span>
-      <span className="text-foreground mt-2.5 line-clamp-2 text-sm leading-5 font-medium">
-        {task.title}
-      </span>
-      <span className="text-muted-foreground mt-3 flex items-center justify-between gap-4 text-[11px]">
-        <span className="min-w-0 truncate font-mono">
-          {task.repository.fullName}
-          {task.phase ? ` · ${task.phase}` : ""}
-        </span>
-        <span className="group-hover:text-foreground group-focus-visible:text-foreground inline-flex shrink-0 items-center gap-1 transition-colors">
+        <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1">
           {task.status === "ready" ? "View result" : "View task"}
           <ArrowUpRight aria-hidden="true" className="size-3.5" />
         </span>
-      </span>
-    </button>
+      </ItemActions>
+    </Item>
   );
 }
 
@@ -381,36 +395,38 @@ function CodeTaskDetailContent({
         )}
         <div className="shrink-0 border-t p-3 sm:px-5">
           {canSteer ? (
-            <div className="flex items-end gap-2">
-              <Textarea
+            <InputGroup>
+              <InputGroupTextarea
                 aria-label="Update code task"
-                className="max-h-28 min-h-10 flex-1 resize-none text-sm"
+                className="max-h-28 min-h-10 text-sm"
                 disabled={sending}
                 maxLength={4000}
                 onChange={handleInstructionChange}
                 placeholder="Add an instruction for this task…"
                 value={instruction}
               />
-              {canStop ? (
-                <Button
-                  aria-label="Stop task"
-                  disabled={sending || task?.status === "cancel_requested"}
-                  onClick={cancelTask}
-                  size="icon"
-                  variant="ghost"
+              <InputGroupAddon align="inline-end">
+                {canStop ? (
+                  <InputGroupButton
+                    aria-label="Stop task"
+                    disabled={sending || task?.status === "cancel_requested"}
+                    onClick={cancelTask}
+                    size="icon-sm"
+                  >
+                    <Square aria-hidden="true" />
+                  </InputGroupButton>
+                ) : null}
+                <InputGroupButton
+                  aria-label="Send task update"
+                  disabled={sending || !instruction.trim()}
+                  onClick={sendInstruction}
+                  size="icon-sm"
+                  variant="default"
                 >
-                  <Square aria-hidden="true" />
-                </Button>
-              ) : null}
-              <Button
-                aria-label="Send task update"
-                disabled={sending || !instruction.trim()}
-                onClick={sendInstruction}
-                size="icon"
-              >
-                <Send aria-hidden="true" />
-              </Button>
-            </div>
+                  <Send aria-hidden="true" />
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           ) : (
             <p className="text-muted-foreground px-1 py-1 text-xs">
               {noUpdateMessage}

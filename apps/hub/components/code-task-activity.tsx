@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   CircleAlert,
   CircleX,
-  Clock3,
   Code2,
   GitCommitHorizontal,
   GitPullRequest,
@@ -15,6 +14,16 @@ import {
   Terminal,
 } from "lucide-react";
 import { CodeTaskCheckpoints } from "@/components/code-task-checkpoints";
+import {
+  Trace,
+  TraceCollapsible,
+  TraceCollapsibleContent,
+  TraceCollapsibleTrigger,
+  TraceDescription,
+  TraceIcon,
+  TraceLine,
+  TraceTitle,
+} from "@/components/ui/trace";
 import type { PublicCodeEvent, PublicCodeTask } from "@/lib/code-tasks/types";
 
 const SENSITIVE_KEY_PATTERN =
@@ -248,14 +257,18 @@ function DetailBlock({ label, value }: { label: string; value: unknown }) {
     return null;
   }
   return (
-    <details className="border-border/70 mt-2 border bg-black/5 px-2.5 py-2 dark:bg-white/[0.03]">
-      <summary className="text-muted-foreground cursor-pointer text-[11px] font-medium">
-        {label}
-      </summary>
-      <pre className="text-muted-foreground mt-2 max-h-56 overflow-auto font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap">
-        {text}
-      </pre>
-    </details>
+    <TraceCollapsible className="mt-1">
+      <TraceCollapsibleTrigger>
+        <TraceLine className="text-[11px] font-medium">
+          <TraceTitle>{label}</TraceTitle>
+        </TraceLine>
+      </TraceCollapsibleTrigger>
+      <TraceCollapsibleContent keepMounted>
+        <pre className="max-h-56 overflow-auto font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap">
+          {text}
+        </pre>
+      </TraceCollapsibleContent>
+    </TraceCollapsible>
   );
 }
 
@@ -303,22 +316,21 @@ function ActivityEventRow({ event }: { event: PublicCodeEvent }) {
     data.isError === true ||
     (numberValue(data.exitCode) !== null && numberValue(data.exitCode) !== 0);
   return (
-    <article className="relative flex gap-3 pb-4 last:pb-0">
-      <div className="bg-background border-border text-muted-foreground z-10 flex size-7 shrink-0 items-center justify-center rounded-full border">
-        <ActivityIcon event={event} />
-      </div>
-      <div className="min-w-0 flex-1 pt-0.5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p
-            className={`text-sm font-medium ${isError ? "text-destructive" : "text-foreground"}`}
-          >
-            {eventLabel(event)}
-          </p>
-          <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] tabular-nums">
-            <Clock3 aria-hidden="true" className="size-3" />
-            {formatTime(event.createdAt)}
-          </span>
-        </div>
+    <article className="flex min-w-0 flex-col">
+      <TraceLine className="w-full" status={isError ? "error" : undefined}>
+        <TraceIcon>
+          <ActivityIcon event={event} />
+        </TraceIcon>
+        <TraceTitle
+          className={isError ? undefined : "text-foreground font-medium"}
+        >
+          {eventLabel(event)}
+        </TraceTitle>
+        <TraceDescription className="ml-auto text-[11px]">
+          {formatTime(event.createdAt)}
+        </TraceDescription>
+      </TraceLine>
+      <div className="min-w-0 pl-6">
         {message ? (
           <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
             {message}
@@ -387,25 +399,26 @@ export function CodeTaskActivity({
         task={task}
       />
       {activityEvents.length ? (
-        <details
+        <TraceCollapsible
           className="border-border border-t pt-4"
           data-testid="code-task-transcript"
         >
-          <summary className="text-muted-foreground hover:text-foreground focus-visible:ring-ring cursor-pointer text-xs focus-visible:ring-1">
-            All activity · {events.length} events
-          </summary>
-          <div className="relative mt-4 pl-0.5">
-            <div className="border-border absolute top-4 bottom-4 left-[15px] border-l" />
-            <div className="space-y-0">
+          <TraceCollapsibleTrigger>
+            <TraceLine className="text-xs">
+              <TraceTitle>All activity · {events.length} events</TraceTitle>
+            </TraceLine>
+          </TraceCollapsibleTrigger>
+          <TraceCollapsibleContent keepMounted>
+            <Trace className="gap-3">
               {activityEvents.map((event) => (
                 <ActivityEventRow
                   event={event}
                   key={`${event.seq}:${event.type}`}
                 />
               ))}
-            </div>
-          </div>
-        </details>
+            </Trace>
+          </TraceCollapsibleContent>
+        </TraceCollapsible>
       ) : (
         <p className="text-muted-foreground py-4 text-sm">
           {isTerminal

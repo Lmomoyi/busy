@@ -135,26 +135,44 @@ describe("library sheet", () => {
     ).toBe("Legal assistant");
   });
 
-  it("downloads from the filename or the download action", async () => {
+  it("previews from the filename and downloads from the download action", async () => {
     const generated = makeFile({
       contentType: "image/png",
       id: "33333333-3333-4333-8333-333333333333",
       name: "design.png",
     });
-    server.on("GET", "/api/library", json(page([generated])));
+    const deck = makeFile({
+      contentType:
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      id: "44444444-4444-4444-8444-444444444444",
+      name: "deck.pptx",
+    });
+    server.on("GET", "/api/library", json(page([generated, deck])));
     renderBusy();
     await openLibrary();
     await settle(20);
 
     const expectedHref = `/api/files/${generated.id}?download`;
-    const filenameLink = screen.getByRole("link", { name: "design.png" });
     const downloadLink = screen.getByRole("link", {
       name: "Download design.png",
     });
-    expect(filenameLink.getAttribute("href")).toBe(expectedHref);
-    expect(filenameLink.getAttribute("download")).toBe("design.png");
     expect(downloadLink.getAttribute("href")).toBe(expectedHref);
     expect(downloadLink.getAttribute("download")).toBe("design.png");
+
+    // No preview for a deck: the filename still downloads it.
+    expect(
+      screen.getByRole("link", { name: "deck.pptx" }).getAttribute("href")
+    ).toBe(`/api/files/${deck.id}?download`);
+
+    fireEvent.click(screen.getByRole("button", { name: "design.png" }));
+    await settle(10);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("design.png")).toBeTruthy();
+    expect(
+      within(dialog)
+        .getByRole("link", { name: "Download" })
+        .getAttribute("href")
+    ).toBe(expectedHref);
   });
 
   it("closes without losing the bot draft", async () => {

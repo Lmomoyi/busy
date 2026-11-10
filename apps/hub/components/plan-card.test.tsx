@@ -40,7 +40,7 @@ const plan: TaskPlan = {
   title: "Acme proposal",
 };
 
-test("renders responsibility, verified progress and blockers with a native disclosure", () => {
+test("renders responsibility, verified progress and blockers in an open disclosure", () => {
   const { container } = render(<PlanCard plan={plan} />);
   expect(screen.getByText("Acme proposal")).toBeTruthy();
   expect(screen.getByText("1/3 completed")).toBeTruthy();
@@ -50,8 +50,11 @@ test("renders responsibility, verified progress and blockers with a native discl
   expect(
     screen.getByRole("list", { name: "Plan steps" }).children
   ).toHaveLength(3);
-  expect(container.querySelector("details")?.open).toBe(true);
-  expect(container.querySelector("summary")).toBeTruthy();
+  expect(
+    container
+      .querySelector('[data-slot="trace-collapsible-trigger"]')
+      ?.getAttribute("aria-expanded")
+  ).toBe("true");
 });
 
 test("shows interruption without claiming the unfinished step is still running", () => {

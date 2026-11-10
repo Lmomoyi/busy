@@ -26,6 +26,13 @@ vi.mock("@/components/chat-app", () => ({
   useStore: () => ({ answer }),
 }));
 
+const choose = (label: string) => {
+  fireEvent.click(screen.getByRole("radio", { name: label }));
+  fireEvent.click(screen.getByRole("button", { name: "Send answer" }));
+};
+const sendButton = () =>
+  screen.getByRole("button", { name: "Send answer" }) as HTMLButtonElement;
+
 const question = (
   over: Partial<InteractionCardItem> = {}
 ): InteractionCardItem => ({
@@ -53,15 +60,12 @@ describe("InteractionCard", () => {
   it("sends a choice and disables controls until eve settles it", () => {
     render(<InteractionCard item={question()} slug="sales" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Excel" }));
+    choose("Excel");
     expect(answer).toHaveBeenCalledWith("sales", "interaction-1", {
       optionId: "xlsx",
     });
     expect(screen.getByRole("status").textContent).toBe("Sending…");
-    expect(
-      (screen.getByRole("button", { name: "Excel" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
+    expect(sendButton().disabled).toBe(true);
   });
 
   it("renders a free-text question and submits its answer", async () => {
@@ -95,24 +99,18 @@ describe("InteractionCard", () => {
     answer.mockResolvedValueOnce(false);
     render(<InteractionCard item={question()} slug="sales" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Excel" }));
+    choose("Excel");
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("Couldn't send")
     );
-    expect(
-      (screen.getByRole("button", { name: "Excel" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(false);
+    expect(sendButton().disabled).toBe(false);
   });
 
   it("keeps native submitted responses disabled until the stream settles", () => {
     render(<InteractionCard item={question({ pending: true })} slug="sales" />);
 
-    const button = screen.getByRole("button", {
-      name: "Excel",
-    }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    fireEvent.click(button);
+    expect(sendButton().disabled).toBe(true);
+    fireEvent.click(sendButton());
     expect(answer).not.toHaveBeenCalled();
   });
 
@@ -120,29 +118,21 @@ describe("InteractionCard", () => {
     const { rerender } = render(
       <InteractionCard item={question()} slug="sales" />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Excel" }));
+    choose("Excel");
     await waitFor(() => expect(answer).toHaveBeenCalledTimes(1));
     rerender(
       <InteractionCard item={question({ pending: true })} slug="sales" />
     );
-    expect(
-      (screen.getByRole("button", { name: "Excel" }) as HTMLButtonElement)
-        .disabled
-    ).toBe(true);
+    expect(sendButton().disabled).toBe(true);
     rerender(
       <InteractionCard
         item={question({ error: "Response refused" })}
         slug="sales"
       />
     );
-    await waitFor(() =>
-      expect(
-        (screen.getByRole("button", { name: "Excel" }) as HTMLButtonElement)
-          .disabled
-      ).toBe(false)
-    );
+    await waitFor(() => expect(sendButton().disabled).toBe(false));
     expect(screen.getByRole("alert").textContent).toContain("Response refused");
-    fireEvent.click(screen.getByRole("button", { name: "Excel" }));
+    choose("Excel");
     await waitFor(() => expect(answer).toHaveBeenCalledTimes(2));
   });
 
@@ -160,6 +150,38 @@ describe("InteractionCard", () => {
 
     expect(screen.queryByRole("button", { name: "Excel" })).toBeNull();
     expect(screen.getByText("Approval declined.")).toBeTruthy();
+  });
+
+  it("shows the chosen answer once the question settles", () => {
+    render(
+      <InteractionCard
+        item={question({ outcome: "csv", state: "accepted" })}
+        slug="sales"
+      />
+    );
+
+    expect(screen.getByText("CSV")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("approves from the confirmation actions", () => {
+    render(
+      <InteractionCard
+        item={question({
+          options: [
+            { id: "approve", label: "Approve", style: "primary" },
+            { id: "deny", label: "Deny", style: "secondary" },
+          ],
+          type: "approval",
+        })}
+        slug="sales"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    expect(answer).toHaveBeenCalledWith("sales", "interaction-1", {
+      optionId: "approve",
+    });
   });
 
   it("does not expose the repository id after setup is accepted", () => {

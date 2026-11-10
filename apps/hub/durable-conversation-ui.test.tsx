@@ -162,8 +162,9 @@ describe("durable conversation UI", () => {
     const activeTask = screen.getByRole("button", {
       name: "Agent: Independent work",
     });
-    expect(activeTask.querySelector(".animate-spin")).not.toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    expect(activeTask.querySelector('[data-status="running"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Work" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send answer" }));
     expect(answer).toHaveBeenCalledWith("sales", "child-question", {
       optionId: "work",
     });
@@ -282,7 +283,7 @@ describe("durable conversation UI", () => {
     render(<MessageList items={items} pending={[]} slug="sales" working />);
 
     expect(screen.getByText("Which format should I use?")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Excel" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Excel" })).toBeTruthy();
     expect(screen.getByText("Send the quote?")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(answer).toHaveBeenCalledWith("sales", "approval-1", {

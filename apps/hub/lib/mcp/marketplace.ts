@@ -20,13 +20,21 @@ import {
   withConnection,
 } from "./store";
 
+/**
+ * Credentials sealed with another SESSION_SECRET (a local hub beside a deployed one) can't be
+ * read here. That provider shows as not set up; the rest of the catalogue still lists.
+ * Connecting still fails closed: those routes read the client themselves.
+ */
+const providerConfigured = (provider: "github" | "google") =>
+  getProviderClient(provider).then(Boolean, () => false);
+
 export async function marketplaceSnapshot() {
   const [github, google, connections] = await Promise.all([
-    getProviderClient("github"),
-    getProviderClient("google"),
+    providerConfigured("github"),
+    providerConfigured("google"),
     listConnections(),
   ]);
-  const configured = { github: Boolean(github), google: Boolean(google) };
+  const configured = { github, google };
   const catalog = MCP_CATALOG.map((entry) => ({
     ...entry,
     catalogHash: catalogHash(entry),

@@ -1,26 +1,37 @@
 "use client";
 
+import { Check, CircleAlert, Loader2, ShieldCheck, X } from "lucide-react";
 import {
-  Check,
-  CircleAlert,
-  Loader2,
-  MessageCircleQuestion,
-  ShieldCheck,
-  X,
-} from "lucide-react";
-import {
-  type ChangeEvent,
   type FormEvent,
   type MouseEvent,
+  type ReactNode,
   useCallback,
+  useMemo,
   useState,
 } from "react";
 import { useStore } from "@/components/chat-app";
 import { CodeRepositorySetupCard } from "@/components/code-repository-setup-card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
+import {
+  Questionnaire,
+  QuestionnaireActions,
+  QuestionnaireChoice,
+  QuestionnaireChoices,
+  QuestionnaireDescription,
+  QuestionnaireInput,
+  QuestionnaireItem,
+  QuestionnaireSubmit,
+  QuestionnaireTitle,
+} from "@/components/ui/questionnaire";
 import type { ChatItem } from "@/lib/chat/items";
-import { cn } from "@/lib/utils";
 
 /**
  * The small, transport-neutral shape emitted by the eve stream projection.
@@ -66,114 +77,118 @@ const safeHttpUrl = (value: string | undefined): string | undefined => {
   }
 };
 
-function buttonVariant(style: "primary" | "danger" | "secondary" | undefined) {
-  if (style === "danger") {
-    return "destructive" as const;
-  }
-  if (style === "secondary") {
-    return "secondary" as const;
-  }
-  return "default" as const;
+interface Answer {
+  optionId?: string;
+  text?: string;
 }
+type Options = InteractionCardItem["options"];
 
 /**
- * A question or approval from eve. The user only sees a human label and the
- * answer controls; interaction IDs never appear in the UI. The API request is
- * retried from the same card if transport fails, while eve's settled stream
- * event remains the authority for the final state.
+ * A question or approval from eve, built from shadcn/ui's AI Elements: a
+ * Questionnaire for questions, an Item with actions for approvals (the
+ * Confirmation pattern). The user only sees a human label and the answer
+ * controls; interaction IDs never appear in the UI. The API request is retried
+ * from the same card if transport fails, while eve's settled stream event
+ * remains the authority for the final state.
  */
 export function InteractionCard({ slug, item, onAnswer }: Props) {
   const store = useStore();
-  const {
-    allowFreeform,
-    error,
-    interactionId,
-    link: itemLink,
-    options,
-    prompt,
-    state: itemState,
-    type,
-  } = item;
-  const state = itemState ?? "open";
+  const { interactionId, link: itemLink, options, prompt, type } = item;
+  const state = item.state ?? "open";
   const done = settled.has(state);
-  const kind = type;
   const repositorySetup =
-    kind === "question" &&
+    type === "question" &&
     (item.setup === "code-repository" ||
       item.origin?.callName === "prepare_code_repository");
   const link = safeHttpUrl(itemLink?.url);
-  const linkLabel = itemLink?.label;
   const answer = useCallback(
-    (value: { optionId?: string; text?: string }) =>
+    (value: Answer) =>
       onAnswer
         ? onAnswer(interactionId, value)
         : store.answer(slug, interactionId, value),
     [interactionId, slug, store, onAnswer]
   );
+  const related = link ? (
+    <a
+      className="hover:text-foreground underline underline-offset-2"
+      href={link}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {itemLink?.label ?? "Open related page"}
+    </a>
+  ) : null;
+
+  if (done) {
+    return (
+      <SettledCard
+        answer={
+          repositorySetup
+            ? undefined
+            : givenAnswer(options, item.allowFreeform, item.outcome)
+        }
+        approval={type === "approval"}
+        interactionId={interactionId}
+        outcome={settledOutcome(repositorySetup, state, item.outcome)}
+        prompt={prompt}
+        state={state}
+      />
+    );
+  }
+
+  if (repositorySetup) {
+    return (
+      <div
+        className="border-border flex w-full max-w-md flex-col gap-3 border px-4 py-3"
+        data-interaction-id={interactionId}
+      >
+        <p className="text-sm leading-6 font-medium">{prompt}</p>
+        {related ? (
+          <p className="text-muted-foreground text-sm">{related}</p>
+        ) : null}
+        <CodeRepositorySetupCard
+          answer={answer}
+          botSlug={slug}
+          item={item}
+          pending={item.pending === true}
+          state={state}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={cn(
-        "border-border flex w-full max-w-md flex-col gap-3 rounded-lg border px-4 py-3",
-        kind === "approval" && !done && "border-signal/70",
-        done && "bg-muted/20"
-      )}
-      data-interaction-id={interactionId}
-    >
-      <p className="flex items-start gap-2.5 text-[15px] leading-6">
-        {kind === "approval" ? (
-          <ShieldCheck
-            aria-hidden="true"
-            className={cn(
-              "mt-1 size-4 shrink-0",
-              done ? "text-muted-foreground" : "text-signal"
-            )}
-          />
-        ) : (
-          <MessageCircleQuestion
-            aria-hidden="true"
-            className="text-muted-foreground mt-1 size-4 shrink-0"
-          />
-        )}
-        <span className="flex min-w-0 flex-col gap-1">
-          <span>{prompt}</span>
-        </span>
-      </p>
-      {link ? (
-        <a
-          className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-2"
-          href={link}
-          rel="noreferrer"
-          target="_blank"
-        >
-          {linkLabel ?? "Open related page"}
-        </a>
-      ) : null}
-
-      {done ? (
-        <SettledState
-          outcome={settledOutcome(repositorySetup, state, item.outcome)}
-          state={state}
-        />
-      ) : null}
-
-      {done ? null : (
-        <InteractionControls
-          allowFreeform={allowFreeform}
-          answer={answer}
-          interactionId={interactionId}
-          item={item}
-          itemError={error}
-          kind={kind}
-          options={options}
-          pending={item.pending === true}
-          repositorySetup={repositorySetup}
-          slug={slug}
-          state={state}
-        />
-      )}
+    <div className="w-full max-w-md" data-interaction-id={interactionId}>
+      <InteractionResponse
+        allowFreeform={item.allowFreeform}
+        answer={answer}
+        approval={type === "approval"}
+        itemError={item.error}
+        // A refused or failed response gets a fresh, unlocked form.
+        key={`${interactionId}:${item.pending ? "pending" : (item.error ?? state)}`}
+        options={options}
+        pending={item.pending === true}
+        prompt={prompt}
+        related={related}
+      />
     </div>
   );
+}
+
+/**
+ * What the user answered, in words: the chosen option's label, or their own
+ * text. An option id that matches nothing is never shown.
+ */
+function givenAnswer(
+  options: Options,
+  allowFreeform: boolean,
+  outcome?: string
+): string | undefined {
+  const chosen = options.find((option) => option.id === outcome);
+  if (chosen) {
+    return chosen.label;
+  }
+  return allowFreeform ? outcome : undefined;
 }
 
 function settledOutcome(
@@ -193,84 +208,32 @@ function settledOutcome(
   return "Repository selected.";
 }
 
-function InteractionControls({
-  allowFreeform,
-  answer,
-  interactionId,
-  item,
-  itemError,
-  kind,
-  options,
-  pending,
-  repositorySetup,
-  slug,
-  state,
-}: {
-  allowFreeform: boolean;
-  answer: (value: { optionId?: string; text?: string }) => Promise<boolean>;
-  interactionId: string;
-  item: InteractionCardItem;
-  itemError?: string;
-  kind: string;
-  options: NonNullable<InteractionCardItem["options"]>;
-  pending: boolean;
-  repositorySetup: boolean;
-  slug: string;
-  onAnswer?: (
-    id: string,
-    answer: { optionId?: string; text?: string }
-  ) => Promise<boolean>;
-  state: string;
-}) {
-  if (repositorySetup) {
-    return (
-      <CodeRepositorySetupCard
-        answer={answer}
-        botSlug={slug}
-        item={item}
-        pending={pending}
-        state={state}
-      />
-    );
-  }
-  return (
-    <InteractionResponse
-      allowFreeform={allowFreeform}
-      answer={answer}
-      interactionId={interactionId}
-      itemError={itemError}
-      key={`${interactionId}:${pending ? "pending" : (itemError ?? state)}`}
-      kind={kind}
-      options={options}
-      pending={pending}
-    />
-  );
-}
-
 function InteractionResponse({
-  interactionId,
-  kind,
+  approval,
+  prompt,
+  related,
   options,
   allowFreeform,
   pending,
   itemError,
   answer,
 }: {
-  interactionId: string;
-  kind: string;
-  options: NonNullable<InteractionCardItem["options"]>;
+  approval: boolean;
+  prompt: string;
+  related: ReactNode;
+  options: Options;
   allowFreeform: boolean;
   pending: boolean;
   itemError?: string;
-  answer: (value: { optionId?: string; text?: string }) => Promise<boolean>;
+  answer: (value: Answer) => Promise<boolean>;
 }) {
   const [sending, setSending] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(itemError ?? null);
+  const busy = sending || locked || pending;
 
   const submit = useCallback(
-    async (value: { optionId?: string; text?: string }) => {
+    async (value: Answer) => {
       const submitted = value.optionId ?? value.text ?? "";
       if (!submitted.trim() || sending || locked || pending) {
         return;
@@ -294,38 +257,16 @@ function InteractionResponse({
     [answer, locked, pending, sending]
   );
 
-  return (
+  const feedback = (
     <>
-      {options.length ? (
-        <OptionButtons
-          disabled={sending || locked || pending}
-          kind={kind}
-          onSubmit={submit}
-          options={options}
-        />
-      ) : null}
-      {allowFreeform ? (
-        <FreeformAnswer
-          disabled={sending || locked || pending}
-          draft={draft}
-          interactionId={interactionId}
-          onChange={setDraft}
-          onSubmit={submit}
-        />
-      ) : null}
-      {options.length || allowFreeform ? null : (
-        <p className="text-muted-foreground text-[13px]">
-          Waiting for the bot to continue.
-        </p>
-      )}
-      {sending || locked || pending ? (
-        <p className="text-muted-foreground text-[13px]" role="status">
+      {busy ? (
+        <p className="text-muted-foreground text-xs" role="status">
           Sending…
         </p>
       ) : null}
       {error ? (
         <p
-          className="text-destructive flex items-center gap-1.5 text-[13px]"
+          className="text-destructive flex items-center gap-1.5 text-xs"
           role="alert"
         >
           <CircleAlert aria-hidden="true" className="size-3.5" />
@@ -334,16 +275,57 @@ function InteractionResponse({
       ) : null}
     </>
   );
+
+  // The Confirmation pattern: a prompt with its actions, not a form.
+  if (!allowFreeform && (approval || options.length === 0)) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Item size="sm" variant="outline">
+          {approval ? (
+            <ItemMedia variant="icon">
+              <ShieldCheck aria-hidden="true" className="text-signal" />
+            </ItemMedia>
+          ) : null}
+          <ItemContent>
+            <ItemTitle>{prompt}</ItemTitle>
+            {related || options.length === 0 ? (
+              <ItemDescription>
+                {related ?? "Waiting for the bot to continue."}
+              </ItemDescription>
+            ) : null}
+          </ItemContent>
+          {options.length ? (
+            <ApprovalActions
+              disabled={busy}
+              onSubmit={submit}
+              options={options}
+            />
+          ) : null}
+        </Item>
+        {feedback}
+      </div>
+    );
+  }
+
+  return (
+    <AnswerForm
+      allowFreeform={allowFreeform}
+      busy={busy}
+      feedback={feedback}
+      onSubmit={submit}
+      options={options}
+      prompt={prompt}
+      related={related}
+    />
+  );
 }
 
-function OptionButtons({
+function ApprovalActions({
   options,
-  kind,
   disabled,
   onSubmit,
 }: {
-  options: NonNullable<InteractionCardItem["options"]>;
-  kind: string;
+  options: Options;
   disabled: boolean;
   onSubmit: (value: { optionId: string }) => void;
 }) {
@@ -357,105 +339,165 @@ function OptionButtons({
     [onSubmit]
   );
   return (
-    <fieldset
-      aria-label={kind === "approval" ? "Approval options" : "Answer options"}
-      className="m-0 flex flex-wrap gap-2 border-0 p-0"
-    >
+    <ItemActions>
       {options.map((option) => (
         <Button
           data-option-id={option.id}
           disabled={disabled}
           key={option.id}
           onClick={handleClick}
+          size="sm"
           type="button"
-          variant={
-            kind === "approval" && (option.style ?? "primary") === "primary"
-              ? "signal"
-              : buttonVariant(option.style)
-          }
+          variant={approvalVariant(option.style)}
         >
-          {disabled ? (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          ) : null}
           {option.label}
         </Button>
       ))}
-    </fieldset>
+    </ItemActions>
   );
 }
 
-function FreeformAnswer({
-  interactionId,
-  draft,
-  disabled,
-  onChange,
+function approvalVariant(style: Options[number]["style"]) {
+  if (style === "danger") {
+    return "destructive" as const;
+  }
+  return style === "secondary" ? ("outline" as const) : ("signal" as const);
+}
+
+const ANSWER = "answer";
+
+function AnswerForm({
+  prompt,
+  related,
+  options,
+  allowFreeform,
+  busy,
+  feedback,
   onSubmit,
 }: {
-  interactionId: string;
-  draft: string;
-  disabled: boolean;
-  onChange: (value: string) => void;
-  onSubmit: (value: { text: string }) => void;
+  prompt: string;
+  related: ReactNode;
+  options: Options;
+  allowFreeform: boolean;
+  busy: boolean;
+  feedback: ReactNode;
+  onSubmit: (value: Answer) => void;
 }) {
-  const handleChange = useCallback(
-    (event: ChangeEvent<HTMLTextAreaElement>) => {
-      onChange(event.target.value);
-    },
-    [onChange]
-  );
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      onSubmit({ text: draft });
+      const value = new FormData(event.currentTarget).get(ANSWER);
+      if (typeof value !== "string") {
+        return;
+      }
+      onSubmit(
+        options.some((option) => option.id === value)
+          ? { optionId: value }
+          : { text: value }
+      );
     },
-    [draft, onSubmit]
+    [onSubmit, options]
+  );
+  // Stable identity: Questionnaire re-registers its items when this changes.
+  const items = useMemo(
+    () => [
+      {
+        choices: options.map((option) => ({ value: option.id })),
+        name: ANSWER,
+        required: true,
+      },
+    ],
+    [options]
   );
   return (
-    <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
-      <label className="sr-only" htmlFor={`interaction-${interactionId}`}>
-        Your answer
-      </label>
-      <Textarea
-        disabled={disabled}
-        id={`interaction-${interactionId}`}
-        maxLength={2000}
-        onChange={handleChange}
-        placeholder="Write an answer…"
-        rows={2}
-        value={draft}
-      />
-      <div className="flex justify-end">
-        <Button disabled={disabled || !draft.trim()} type="submit">
-          {disabled ? (
+    <Questionnaire
+      className="border-border gap-3 border p-3"
+      items={items}
+      onSubmit={handleSubmit}
+      shortcuts="numbers"
+    >
+      <QuestionnaireItem
+        className="gap-3"
+        disabled={busy}
+        name={ANSWER}
+        required
+      >
+        <QuestionnaireTitle className="text-sm">{prompt}</QuestionnaireTitle>
+        {related ? (
+          <QuestionnaireDescription>{related}</QuestionnaireDescription>
+        ) : null}
+        <QuestionnaireChoices>
+          {options.map((option) => (
+            <QuestionnaireChoice key={option.id} value={option.id}>
+              {option.label}
+            </QuestionnaireChoice>
+          ))}
+          {allowFreeform ? (
+            <QuestionnaireInput
+              aria-label="Your answer"
+              maxLength={2000}
+              placeholder={
+                options.length ? "Something else…" : "Write an answer…"
+              }
+            />
+          ) : null}
+        </QuestionnaireChoices>
+      </QuestionnaireItem>
+      <QuestionnaireActions>
+        <div className="col-start-1 row-start-1 min-w-0">{feedback}</div>
+        <QuestionnaireSubmit disabled={busy} size="sm">
+          {busy ? (
             <Loader2 aria-hidden="true" className="animate-spin" />
           ) : null}
           Send answer
-        </Button>
-      </div>
-    </form>
+        </QuestionnaireSubmit>
+      </QuestionnaireActions>
+    </Questionnaire>
   );
 }
 
-function SettledState({ state, outcome }: { state: string; outcome?: string }) {
+function SettledCard({
+  interactionId,
+  approval,
+  prompt,
+  state,
+  outcome,
+  answer,
+}: {
+  interactionId: string;
+  approval: boolean;
+  prompt: string;
+  state: string;
+  outcome?: string;
+  answer?: string;
+}) {
+  let icon = approval ? <ShieldCheck aria-hidden="true" /> : null;
+  let text = outcome ?? "No longer needed.";
   if (state === "accepted") {
-    return (
-      <p className="text-muted-foreground flex items-center gap-1.5 text-[13px]">
-        <Check aria-hidden="true" className="size-3.5" />
-        Answer sent.
-      </p>
-    );
-  }
-  if (state === "declined" || state === "rejected") {
-    return (
-      <p className="text-muted-foreground flex items-center gap-1.5 text-[13px]">
-        <X aria-hidden="true" className="size-3.5" />
-        Approval declined.
-      </p>
-    );
+    icon = <Check aria-hidden="true" />;
+    text = answer ?? "Answer sent.";
+  } else if (state === "declined" || state === "rejected") {
+    icon = <X aria-hidden="true" />;
+    text = "Approval declined.";
   }
   return (
-    <p className="text-muted-foreground text-[13px]">
-      {outcome ?? "No longer needed."}
-    </p>
+    <Item
+      className="max-w-md"
+      data-interaction-id={interactionId}
+      size="sm"
+      variant="muted"
+    >
+      {icon ? (
+        <ItemMedia className="text-muted-foreground" variant="icon">
+          {icon}
+        </ItemMedia>
+      ) : null}
+      <ItemContent>
+        <ItemDescription className="line-clamp-none">{prompt}</ItemDescription>
+        <ItemTitle className="break-words whitespace-pre-wrap">
+          {text}
+        </ItemTitle>
+      </ItemContent>
+    </Item>
   );
 }

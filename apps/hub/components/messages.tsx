@@ -3,7 +3,6 @@
 import {
   AlertCircle,
   Check,
-  ChevronRight,
   Clock3,
   Copy,
   KeyRound,
@@ -38,7 +37,39 @@ import { FileCard } from "@/components/file-card";
 import { FormCard } from "@/components/form-card";
 import { MessageMarkdown } from "@/components/message-markdown";
 import { PlanCard } from "@/components/plan-card";
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/components/ui/attachment";
+import { Bubble, BubbleContent, BubbleReactions } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
+import {
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+  Item as Row,
+} from "@/components/ui/item";
+import {
+  Message,
+  MessageContent,
+  MessageFooter,
+  MessageHeader,
+} from "@/components/ui/message";
+import {
+  Trace,
+  TraceCollapsible,
+  TraceCollapsibleContent,
+  TraceCollapsibleTrigger,
+  TraceDescription,
+  TraceIcon,
+  TraceLine,
+  TraceTitle,
+} from "@/components/ui/trace";
 import type { Pending } from "@/lib/chat/client-store";
 import {
   type ChatItem,
@@ -455,11 +486,11 @@ const ChatActivityStatus = memo(function ActivityStatusLine({
     text = "Thinking…";
   }
   return (
-    <p className="text-muted-foreground text-[15px] leading-7" role="status">
-      <span className={waitingForInput ? undefined : "text-shimmer"}>
-        {text}
-      </span>
-    </p>
+    <Trace role="status">
+      <TraceLine status={waitingForInput ? undefined : "running"}>
+        <TraceTitle>{text}</TraceTitle>
+      </TraceLine>
+    </Trace>
   );
 });
 
@@ -646,16 +677,22 @@ const Item = memo(function MessageItem({
       );
     case "bot":
       return (
-        <>
-          <div className="prose-chat text-[15px] leading-7">
-            <MessageMarkdown
-              prepared={item.markdown}
-              streaming={item.streaming}
-              text={item.text}
-            />
-          </div>
-          {copyable ? <CopyButton text={item.text} /> : null}
-        </>
+        <Message>
+          <MessageContent>
+            <div className="prose-chat text-[15px] leading-7">
+              <MessageMarkdown
+                prepared={item.markdown}
+                streaming={item.streaming}
+                text={item.text}
+              />
+            </div>
+            {copyable ? (
+              <MessageFooter className="px-0">
+                <CopyButton text={item.text} />
+              </MessageFooter>
+            ) : null}
+          </MessageContent>
+        </Message>
       );
     case "file":
       return (
@@ -706,32 +743,44 @@ const Item = memo(function MessageItem({
         );
       }
       return (
-        <div
-          className="text-destructive flex items-start gap-2 text-sm"
-          role="alert"
-        >
-          <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <div className="flex min-w-0 flex-col gap-1">
-            <p>{item.text}</p>
-            {item.detail ? (
-              <details className="text-muted-foreground text-xs">
-                <summary className="cursor-pointer select-none">
-                  Details
-                </summary>
-                <p className="mt-1 font-mono break-words whitespace-pre-wrap">
-                  {item.detail}
-                </p>
-              </details>
-            ) : null}
-          </div>
-        </div>
+        <Trace role="alert">
+          {item.detail ? (
+            <TraceCollapsible>
+              <TraceCollapsibleTrigger>
+                <ErrorLine text={item.text} />
+              </TraceCollapsibleTrigger>
+              <TraceCollapsibleContent className="font-mono text-xs break-words whitespace-pre-wrap">
+                {item.detail}
+              </TraceCollapsibleContent>
+            </TraceCollapsible>
+          ) : (
+            <ErrorLine text={item.text} />
+          )}
+        </Trace>
       );
     case "stopped":
-      return <p className="text-muted-foreground text-sm">Stopped.</p>;
+      return (
+        <Trace>
+          <TraceLine>
+            <TraceTitle>Stopped.</TraceTitle>
+          </TraceLine>
+        </Trace>
+      );
     default:
       return null;
   }
 });
+
+function ErrorLine({ text }: { text: string }) {
+  return (
+    <TraceLine status="error">
+      <TraceIcon>
+        <AlertCircle />
+      </TraceIcon>
+      <TraceTitle className="whitespace-normal">{text}</TraceTitle>
+    </TraceLine>
+  );
+}
 
 // ponytail: copies the markdown as written, like ai-elements; rich HTML for Word/Gmail if users ask.
 function CopyButton({ text }: { text: string }) {
@@ -746,18 +795,16 @@ function CopyButton({ text }: { text: string }) {
       .catch(() => undefined);
   }, [text]);
   return (
-    <button
+    <Button
       aria-label={copied ? "Copied" : "Copy reply"}
-      className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 -ml-1.5 grid size-7 place-items-center rounded-md transition-colors"
+      className="text-muted-foreground -ml-1.5"
       onClick={handleCopy}
+      size="icon-sm"
       type="button"
+      variant="ghost"
     >
-      {copied ? (
-        <Check aria-hidden="true" className="size-3.5" />
-      ) : (
-        <Copy aria-hidden="true" className="size-3.5" />
-      )}
-    </button>
+      {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+    </Button>
   );
 }
 
@@ -779,47 +826,51 @@ function UserBubble({
   hideError?: boolean;
 }) {
   return (
-    <div className="ml-auto flex max-w-[80%] flex-col items-end gap-1.5">
-      {routineName ? (
-        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <Clock3 aria-hidden="true" className="size-3.5" />
-          Routine · {routineName}
-        </p>
-      ) : null}
-      {files.length ? (
-        <ul className="flex flex-wrap justify-end gap-1.5">
-          {files.map((f) => (
-            <li
-              className="bg-secondary text-muted-foreground flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px]"
-              key={f}
-            >
-              <Paperclip aria-hidden="true" className="size-3.5" />
-              {f}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {text ? (
-        <p className="bg-secondary rounded-2xl px-4 py-2.5 text-[15px] leading-6 whitespace-pre-wrap">
-          {text}
-        </p>
-      ) : null}
-      {reaction ? (
-        <span
-          aria-label={`The bot reacted ${reaction}`}
-          className="bg-background -mt-3 mr-2 rounded-full border px-1.5 text-sm leading-6 shadow-xs"
-          role="img"
-        >
-          {reaction}
-        </span>
-      ) : null}
-      {state === "failed" && !hideError ? (
-        <p className="text-destructive text-[13px]" role="alert">
-          {error ??
-            "Busy couldn't confirm delivery. Check the chat before retrying."}
-        </p>
-      ) : null}
-    </div>
+    <Message align="end">
+      <MessageContent className="gap-1.5">
+        {routineName ? (
+          <MessageHeader className="justify-end gap-1.5 px-0">
+            <Clock3 aria-hidden="true" className="size-3.5" />
+            Routine · {routineName}
+          </MessageHeader>
+        ) : null}
+        {files.length ? (
+          <AttachmentGroup className="max-w-[80%] flex-wrap justify-end">
+            {files.map((f) => (
+              <Attachment key={f} size="sm">
+                <AttachmentMedia>
+                  <Paperclip aria-hidden="true" />
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{f}</AttachmentTitle>
+                </AttachmentContent>
+              </Attachment>
+            ))}
+          </AttachmentGroup>
+        ) : null}
+        {text ? (
+          <Bubble align="end" variant="secondary">
+            <BubbleContent className="px-4 py-2.5 text-[15px] leading-6 whitespace-pre-wrap">
+              {text}
+            </BubbleContent>
+            {reaction ? (
+              <BubbleReactions
+                aria-label={`The bot reacted ${reaction}`}
+                role="img"
+              >
+                {reaction}
+              </BubbleReactions>
+            ) : null}
+          </Bubble>
+        ) : null}
+        {state === "failed" && !hideError ? (
+          <MessageFooter className="text-destructive px-0" role="alert">
+            {error ??
+              "Busy couldn't confirm delivery. Check the chat before retrying."}
+          </MessageFooter>
+        ) : null}
+      </MessageContent>
+    </Message>
   );
 }
 
@@ -847,9 +898,12 @@ const label = (tool: string) => TOOL_LABELS[tool] ?? tool;
 
 // One line, cut at the edge; the whole command on hover.
 const Detail = ({ text }: { text: string }) => (
-  <span className="min-w-0 truncate font-mono text-xs opacity-70" title={text}>
+  <TraceDescription
+    className="min-w-0 shrink truncate font-mono text-xs"
+    title={text}
+  >
     {text}
-  </span>
+  </TraceDescription>
 );
 
 function taskLabel(task: Activity): string {
@@ -873,7 +927,9 @@ function stepSummary(
   if (running) {
     return (
       <>
-        {task ? taskLabel(task) : label(running.tool)}
+        <TraceTitle className="shrink-0">
+          {task ? taskLabel(task) : label(running.tool)}
+        </TraceTitle>
         {running.detail ? <Detail text={running.detail} /> : null}
       </>
     );
@@ -885,7 +941,7 @@ function stepSummary(
     } else if (end === "stopped") {
       endLabel = "stopped";
     }
-    return `${taskLabel(task)} ${endLabel}`;
+    return <TraceTitle>{`${taskLabel(task)} ${endLabel}`}</TraceTitle>;
   }
   const countLabel = steps.length === 1 ? "step" : "steps";
   let suffix = "";
@@ -894,7 +950,9 @@ function stepSummary(
   } else if (end === "stopped") {
     suffix = ", stopped";
   }
-  return `${steps.length} ${countLabel} on its computer${suffix}`;
+  return (
+    <TraceTitle>{`${steps.length} ${countLabel} on its computer${suffix}`}</TraceTitle>
+  );
 }
 
 function Steps({
@@ -904,8 +962,6 @@ function Steps({
   steps: Activity[];
   waitingActivities: ReadonlySet<string>;
 }) {
-  const [open, setOpen] = useState(false);
-  const toggle = useCallback(() => setOpen((value) => !value), []);
   const running = steps.find(
     (s) => s.state === "running" && !waitingActivities.has(s.id)
   );
@@ -915,69 +971,42 @@ function Steps({
   // A failed step followed by more work is one the bot got past (a photo too big to read, resized and
   // read again): only a failure it ended on is an error.
   const summary = stepSummary(steps, running ?? waiting);
-  let indicator = (
-    <ChevronRight
-      aria-hidden="true"
-      className={cn("size-4 transition-transform", open && "rotate-90")}
-    />
-  );
-  if (running) {
-    indicator = <Loader2 aria-hidden="true" className="size-4 animate-spin" />;
-  } else if (waiting) {
-    indicator = <Clock3 aria-hidden="true" className="size-4" />;
-  }
   return (
-    <div className="text-muted-foreground text-[15px] leading-7">
-      <button
-        aria-expanded={open}
-        className="hover:text-foreground flex max-w-full min-w-0 items-center gap-2 rounded-sm transition-colors"
-        onClick={toggle}
-        type="button"
-      >
-        {indicator}
-        <span
-          className={cn(
-            "flex min-w-0 items-baseline gap-1.5",
-            running && "text-shimmer"
-          )}
-        >
-          {summary}
-        </span>
-      </button>
-      {open ? (
-        <ul
-          className={cn(
-            "border-border mt-2 flex flex-col gap-1 overflow-hidden border-l pl-4",
-            styles.steps
-          )}
-        >
-          {steps.map((s, i) => {
-            const last = i === steps.length - 1;
-            return (
-              <li
-                className={cn(
-                  "flex min-w-0 items-baseline gap-1.5",
-                  s.state === "error" && last && "text-destructive"
-                )}
-                key={s.id}
-              >
-                <span className="shrink-0">{label(s.tool)}</span>{" "}
-                {s.detail ? (
-                  <Detail text={s.detail} />
-                ) : (
-                  <span className="font-mono text-xs opacity-70">{s.tool}</span>
-                )}
-                {s.state === "error" || s.state === "stopped" ? (
-                  <span className="shrink-0">
-                    {` ${stepStatusLabel(s.state, last)}`}
-                  </span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
+    <Trace>
+      <TraceCollapsible>
+        <TraceCollapsibleTrigger>
+          <TraceLine status={running ? "running" : undefined}>
+            {waiting && !running ? (
+              <TraceIcon>
+                <Clock3 />
+              </TraceIcon>
+            ) : null}
+            {summary}
+          </TraceLine>
+        </TraceCollapsibleTrigger>
+        <TraceCollapsibleContent>
+          <Trace className="gap-1">
+            {steps.map((s, i) => {
+              const last = i === steps.length - 1;
+              return (
+                <TraceLine
+                  key={s.id}
+                  status={s.state === "error" && last ? "error" : undefined}
+                >
+                  <TraceTitle className="shrink-0">{label(s.tool)}</TraceTitle>
+                  <Detail text={s.detail || s.tool} />
+                  {s.state === "error" || s.state === "stopped" ? (
+                    <TraceDescription>
+                      {stepStatusLabel(s.state, last)}
+                    </TraceDescription>
+                  ) : null}
+                </TraceLine>
+              );
+            })}
+          </Trace>
+        </TraceCollapsibleContent>
+      </TraceCollapsible>
+    </Trace>
   );
 }
 
@@ -1030,14 +1059,43 @@ function LoginCard({
     }
   }, [item.interactionId, slug, store, onAnswerInteraction]);
   return (
-    <div className="border-border flex w-full max-w-md flex-col gap-3 rounded-lg border px-4 py-3">
-      <p className="flex items-start gap-2.5 text-[15px] leading-6">
-        <KeyRound
-          aria-hidden="true"
-          className="text-muted-foreground mt-1 size-4 shrink-0"
-        />
-        {item.text}
-      </p>
+    <div className="flex w-full max-w-md flex-col gap-2">
+      <Row size="sm" variant={item.state === "open" ? "outline" : "muted"}>
+        <ItemMedia className="text-muted-foreground" variant="icon">
+          {item.state === "done" ? (
+            <Check aria-hidden="true" />
+          ) : (
+            <KeyRound aria-hidden="true" />
+          )}
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>{item.text}</ItemTitle>
+          {item.state === "open" ? null : (
+            <ItemDescription>{loginClosedText(item)}</ItemDescription>
+          )}
+          {item.state === "open" && controlOpen ? (
+            <ItemDescription>
+              Use “Done logging in” in Live to release control first.
+            </ItemDescription>
+          ) : null}
+        </ItemContent>
+        {item.state === "open" && !form ? (
+          <ItemActions>
+            <Button onClick={onTakeControl} size="sm" variant="outline">
+              <MousePointer2 aria-hidden="true" />
+              Take control
+            </Button>
+            <Button disabled={sending || controlOpen} onClick={done} size="sm">
+              {sending ? (
+                <Loader2 aria-hidden="true" className="animate-spin" />
+              ) : (
+                <Check aria-hidden="true" />
+              )}
+              Done
+            </Button>
+          </ItemActions>
+        ) : null}
+      </Row>
       {item.state === "open" && form ? (
         <FormCard
           fields={form.fields}
@@ -1046,37 +1104,8 @@ function LoginCard({
           slug={slug}
         />
       ) : null}
-      {item.state === "open" && !form ? (
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={onTakeControl} variant="outline">
-            <MousePointer2 aria-hidden="true" />
-            Take control
-          </Button>
-          <Button disabled={sending || controlOpen} onClick={done}>
-            {sending ? (
-              <Loader2 aria-hidden="true" className="animate-spin" />
-            ) : (
-              <Check aria-hidden="true" />
-            )}
-            Done
-          </Button>
-        </div>
-      ) : null}
-      {item.state === "open" ? null : (
-        <p className="text-muted-foreground flex items-center gap-1.5 text-[13px]">
-          {item.state === "done" ? (
-            <Check aria-hidden="true" className="size-3.5" />
-          ) : null}
-          {loginClosedText(item)}
-        </p>
-      )}
-      {item.state === "open" && controlOpen ? (
-        <p className="text-muted-foreground text-[13px]">
-          Use “Done logging in” in Live to release control first.
-        </p>
-      ) : null}
       {failed ? (
-        <p className="text-destructive text-[13px]" role="alert">
+        <p className="text-destructive text-xs" role="alert">
           {"Couldn't let it know. Try again."}
         </p>
       ) : null}
@@ -1116,13 +1145,15 @@ function ConsultDivider({
   return (
     <div className="flex justify-center" data-from={slug}>
       {consultationId && onOpen ? (
-        <button
-          className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] transition-colors"
+        <Button
+          className="text-muted-foreground"
           onClick={handleOpen}
+          size="sm"
           type="button"
+          variant="ghost"
         >
           {content}
-        </button>
+        </Button>
       ) : (
         <p className="text-muted-foreground flex items-center gap-1.5 px-2 py-1 text-[13px]">
           {content}

@@ -28,6 +28,7 @@ minimumReleaseAgeExclude:
   - "@vercel/vc-native-win32-x64@65.11.0"
   - vercel@65.11.0
 patchedDependencies:
+  "@shadcn/react@0.3.1": patches/@shadcn__react@0.3.1.patch
   decode-named-character-reference@1.3.0: patches/decode-named-character-reference@1.3.0.patch
   streamdown@2.7.1: patches/streamdown@2.7.1.patch
 packageExtensions:

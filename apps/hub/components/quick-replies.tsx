@@ -1,8 +1,9 @@
 "use client";
 
 import { type MouseEvent, useCallback } from "react";
+import { Button } from "@/components/ui/button";
 
-/** One tap sends the reply as the user's message; writing anything else makes them go away (items.ts). */
+/** The Suggestion pattern from shadcn/ui's AI Elements. One tap sends the reply as the user's message; writing anything else makes them go away (items.ts). */
 export function QuickReplies({
   replies,
   onPick,
@@ -28,15 +29,17 @@ export function QuickReplies({
     <fieldset className="mx-auto flex w-full shrink-0 flex-wrap justify-end gap-2 px-6 pb-2">
       <legend className="sr-only">Suggested replies</legend>
       {replies.map((reply) => (
-        <button
-          className="animate-enter border-border bg-card hover:border-foreground/25 hover:bg-accent max-w-full truncate rounded-full border px-3 py-1.5 text-[13px] leading-5 transition-colors"
+        <Button
+          className="animate-enter max-w-full"
           data-reply={reply}
           key={reply}
           onClick={pick}
+          size="sm"
           type="button"
+          variant="outline"
         >
-          {reply}
-        </button>
+          <span className="truncate">{reply}</span>
+        </Button>
       ))}
     </fieldset>
   );

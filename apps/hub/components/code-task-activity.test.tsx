@@ -101,10 +101,10 @@ test("keeps the initial goal and renders every activity event without empty JSON
 
   expect(screen.getByText(task.goal)).toBeTruthy();
   const transcriptElement = screen.getByTestId("code-task-transcript");
-  expect(transcriptElement.hasAttribute("open")).toBe(false);
+  expect(transcriptElement.hasAttribute("data-open")).toBe(false);
   const transcript = within(transcriptElement);
   fireEvent.click(transcript.getByText(ALL_ACTIVITY));
-  expect(transcriptElement.hasAttribute("open")).toBe(true);
+  expect(transcriptElement.hasAttribute("data-open")).toBe(true);
   expect(transcript.getByText("Agent working")).toBeTruthy();
   expect(transcript.getByText("Started prepare_repository")).toBeTruthy();
   expect(transcript.getByText("Finished prepare_repository")).toBeTruthy();

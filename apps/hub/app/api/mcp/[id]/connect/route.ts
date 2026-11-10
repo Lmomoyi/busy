@@ -7,6 +7,7 @@ import {
   flowCookie,
   flowCookieOptions,
   mcpJson,
+  requestOrigin,
   resultPath,
   safeReturnTo,
 } from "@/lib/mcp/http";
@@ -126,7 +127,7 @@ export async function POST(
   if (!connectionId.safeParse(id).success) {
     return mcpJson({ error: "Connection not found." }, 404);
   }
-  const { origin } = new URL(req.url);
+  const origin = requestOrigin(req);
   const intent = createConnectIntent();
   try {
     const connectUrl = await withConnection<string | null>(
@@ -180,7 +181,7 @@ export async function GET(
   const ticket = requestUrl.searchParams.get("ticket");
   const requestedReturnTo = requestUrl.searchParams.get("returnTo");
   const returnTo = safeReturnTo(requestedReturnTo);
-  const { origin } = requestUrl;
+  const origin = requestOrigin(req);
   const fail = () =>
     NextResponse.redirect(
       new URL(
