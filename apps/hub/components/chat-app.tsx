@@ -28,6 +28,19 @@ import type { Section } from "@/lib/sections/types";
 
 const StoreContext = createContext<ChatStore | null>(null);
 
+// Background snapshots share the browser's connections with the selected chat's stream.
+const PRELOAD_CONCURRENCY = 2;
+
+/** Safari has no requestIdleCallback. Returns its cancel. */
+function whenIdle(callback: () => void): () => void {
+  if (typeof requestIdleCallback === "function") {
+    const id = requestIdleCallback(callback, { timeout: 2000 });
+    return () => cancelIdleCallback(id);
+  }
+  const id = setTimeout(callback, 200);
+  return () => clearTimeout(id);
+}
+
 export function useStore(): ChatStore {
   const store = use(StoreContext);
   if (!store) {
@@ -85,11 +98,28 @@ export function ChatApp({
     }
     warmMarkdownWorker();
     // Every chat loads in the background, so opening one shows it at once instead of a loading line.
-    // ponytail: all bots in parallel; cap it if a workspace grows to dozens of bots.
-    for (const slug of store.getState().order) {
-      store.preload(slug).catch(() => undefined);
-    }
+    // Only once the browser is idle and a few at a time: the selected chat's stream goes first.
+    // Hovering a bot row still loads its chat right away.
+    const queue = [...store.getState().order];
+    let stopped = false;
+    const next = () => {
+      const slug = stopped ? undefined : queue.shift();
+      if (slug === undefined) {
+        return;
+      }
+      store
+        .preload(slug)
+        .catch(() => undefined)
+        .then(next);
+    };
+    const cancelIdle = whenIdle(() => {
+      for (let i = 0; i < PRELOAD_CONCURRENCY; i += 1) {
+        next();
+      }
+    });
     return () => {
+      stopped = true;
+      cancelIdle();
       store.pauseStreams();
     };
   }, [store]);

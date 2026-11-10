@@ -58,7 +58,7 @@ interface TokenResponse {
 /**
  * Keep the hub response as data. No OAuth material is returned from this
  * function: the token broker is called only when eve is about to invoke a
- * protected MCP tool.
+ * protected tool of a legacy connection.
  */
 export async function listMarketplaceConnections(
   fetcher: HubFetch = hubFetch
@@ -128,8 +128,10 @@ export async function resolveMarketplaceConnections(
     const reviewedTools = connection.tools ?? [];
     const legacy = connection.aclMode === "legacy";
     const allowedTools = allowedToolNames(connection, reviewedTools, legacy);
-    const useProxy =
-      !legacy && reviewedTools.some((tool) => Boolean(tool.ui?.resourceUri));
+    // A reviewed connection always goes through the hub, which holds the provider token and applies
+    // the allowlist on every call; the hub refuses to hand that token out. Only a legacy
+    // connection, with no allowlist to enforce, still talks to the provider directly.
+    const useProxy = !legacy;
     const definition = {
       // The allowlist is both a discovery filter and a runtime denial policy.
       // The latter protects calls replayed from an older session history.
@@ -286,7 +288,7 @@ function connectionAuth(
 function proxyUrl(connectionId: string): string {
   const hub = process.env.HUB_URL?.replace(TRAILING_SLASH, "");
   if (!hub) {
-    throw new Error("HUB_URL is required for MCP App connections.");
+    throw new Error("HUB_URL is required for MCP connections.");
   }
   return `${hub}${PROXY_PATH}/${encodeURIComponent(connectionId)}/proxy`;
 }

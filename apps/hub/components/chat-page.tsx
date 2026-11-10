@@ -27,20 +27,6 @@ async function Bots({ params }: Props) {
     notFound();
   }
   return (
-    <ChatApp
-      initial={bots.map((bot) => {
-        // createdAt is server metadata; instructions load when the edit form opens.
-        /* eslint-disable @typescript-eslint/no-unused-vars */
-        const {
-          createdAt: _createdAt,
-          instructions: _instructions,
-          ...initialBot
-        } = bot;
-        /* eslint-enable @typescript-eslint/no-unused-vars */
-        return initialBot;
-      })}
-      initialSections={sections}
-      selected={route?.slug}
-    />
+    <ChatApp initial={bots} initialSections={sections} selected={route?.slug} />
   );
 }

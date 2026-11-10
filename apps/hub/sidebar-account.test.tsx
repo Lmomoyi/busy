@@ -29,7 +29,7 @@ type AccountState = {
 const account = vi.hoisted(() => ({
   state: {
     data: {
-      account: { avatarUrl: null, name: "Matias Solina" },
+      account: { avatarUrl: null, name: "Alex Rivera" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         percentUsed: 12.5,
@@ -112,7 +112,7 @@ function renderAccount(
 
 async function openSettings() {
   fireEvent.click(
-    screen.getByRole("button", { name: "Account menu: Matias Solina" })
+    screen.getByRole("button", { name: "Account menu: Alex Rivera" })
   );
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
   await screen.findByRole("tablist", { name: "Settings sections" });
@@ -129,7 +129,7 @@ let logout: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   account.state = {
     data: {
-      account: { avatarUrl: null, name: "Matias Solina" },
+      account: { avatarUrl: null, name: "Alex Rivera" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         percentUsed: 12.5,
@@ -149,6 +149,21 @@ afterEach(() => {
 });
 
 describe("sidebar account", () => {
+  // First on purpose: React keeps the preload link in the document afterwards.
+  it("asks for the provider logo when the menu opens, not with the page", () => {
+    const logo = () =>
+      document.head.querySelector(
+        'link[rel="preload"][href="/ai-providers/grok.png"]'
+      );
+    renderAccount();
+    expect(logo()).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Account menu: Alex Rivera" })
+    );
+    expect(logo()).toBeTruthy();
+  });
+
   it("retains the selected Settings section after closing and reopening", async () => {
     renderAccount();
     await openSettings();
@@ -255,7 +270,7 @@ describe("sidebar account", () => {
 
   it("renders zero usage as zero and leaves unavailable usage blank", async () => {
     account.state.data = {
-      account: { avatarUrl: null, name: "Matias Solina" },
+      account: { avatarUrl: null, name: "Alex Rivera" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         percentUsed: 0,
@@ -273,7 +288,7 @@ describe("sidebar account", () => {
 
     unmount();
     account.state.data = {
-      account: { avatarUrl: null, name: "Matias Solina" },
+      account: { avatarUrl: null, name: "Alex Rivera" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         percentUsed: null,
@@ -314,7 +329,7 @@ describe("sidebar account", () => {
     renderAccount();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Account menu: Matias Solina" })
+      screen.getByRole("button", { name: "Account menu: Alex Rivera" })
     );
     fireEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
     await settle();

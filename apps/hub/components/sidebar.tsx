@@ -87,6 +87,9 @@ export function Sidebar() {
   const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
   const toggleSidebar = useCallback(() => setCollapsed((value) => !value), []);
   const openMarketplace = useCallback(() => setMarketplace(true), []);
+  const preloadMarketplace = useCallback(() => {
+    import("@/components/mcp-marketplace").catch(() => undefined);
+  }, []);
   const callbackOpen = useCallbackMarketplaceOpen();
   const marketplaceOpen = marketplace || callbackOpen;
   const onMarketplaceOpenChange = useCallback(
@@ -135,7 +138,11 @@ export function Sidebar() {
           )}
         </button>
       </div>
-      <BotList collapsed={collapsed} onMarketplaceOpen={openMarketplace} />
+      <BotList
+        collapsed={collapsed}
+        onMarketplaceOpen={openMarketplace}
+        onMarketplacePreload={preloadMarketplace}
+      />
       <MountOnOpen open={marketplaceOpen}>
         <McpMarketplace
           onOpenChange={onMarketplaceOpenChange}
@@ -184,14 +191,19 @@ export function MobileMenu() {
 function BotList({
   onSelect,
   onMarketplaceOpen,
+  onMarketplacePreload,
   collapsed = false,
 }: {
   onSelect?: () => void;
   onMarketplaceOpen?: () => void;
+  onMarketplacePreload?: () => void;
   collapsed?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const createBot = useCallback(() => setCreating(true), []);
+  const preloadBotDialog = useCallback(() => {
+    import("@/components/bot-dialog").catch(() => undefined);
+  }, []);
   return (
     <>
       <BotSections collapsed={collapsed} onSelect={onSelect} />
@@ -202,6 +214,8 @@ function BotList({
             collapsed && "justify-center"
           )}
           onClick={createBot}
+          onFocus={preloadBotDialog}
+          onPointerEnter={preloadBotDialog}
           title={collapsed ? "Create bot" : undefined}
           type="button"
         >
@@ -212,6 +226,7 @@ function BotList({
       <SidebarAccount
         collapsed={collapsed}
         onOpenMarketplace={onMarketplaceOpen ?? NOOP}
+        onPreloadMarketplace={onMarketplacePreload}
       />
       <MountOnOpen open={creating}>
         <BotDialog onOpenChange={setCreating} open={creating} />

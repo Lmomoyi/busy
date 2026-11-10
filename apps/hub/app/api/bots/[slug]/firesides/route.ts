@@ -21,7 +21,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     (await listFiresides(bot.id)).map((row) => ({
       createdAt: row.createdAt.toISOString(),
       id: row.id,
-      names: Object.values(row.state.participants).map((p) => p.name),
+      names: row.names,
       status: row.status,
     }))
   );

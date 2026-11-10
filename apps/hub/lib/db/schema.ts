@@ -736,7 +736,13 @@ export const events = pgTable(
     sessionId: text("session_id").notNull(),
     type: text("type").notNull(),
   },
-  (t) => [primaryKey({ columns: [t.sessionId, t.line, t.index] })]
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.line, t.index] }),
+    // Which sessions a bot's user wrote in: the archive and its "has one" check (initial.ts).
+    index("events_archived_sessions_idx")
+      .on(t.botId, t.sessionId)
+      .where(sql`${t.type} = 'delivery.consumed'`),
+  ]
 );
 
 export const cursors = pgTable("cursors", {

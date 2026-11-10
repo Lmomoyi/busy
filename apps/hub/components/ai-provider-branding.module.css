@@ -2,7 +2,7 @@
    interface. See docs/ai-provider-assets.json. */
 @font-face {
   font-family: "SIWC Inter";
-  src: url("/ai-providers/chatgpt-inter-medium.ttf") format("truetype");
+  src: url("/ai-providers/chatgpt-inter-medium.woff2") format("woff2");
   font-style: normal;
   font-weight: 500;
   font-display: swap;

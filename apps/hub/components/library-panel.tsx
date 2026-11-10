@@ -14,13 +14,6 @@ import {
 } from "lucide-react";
 import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import type {
   LibraryFile,
   LibraryFileSource,
@@ -67,34 +60,6 @@ function FileIcon({ contentType }: { contentType: string }) {
       aria-hidden="true"
       className="text-muted-foreground size-5 shrink-0"
     />
-  );
-}
-
-export function LibrarySheet({
-  slug,
-  name,
-  open,
-  onOpenChange,
-}: {
-  slug: string;
-  name: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <Sheet onOpenChange={onOpenChange} open={open}>
-      <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
-        <SheetHeader className="border-border border-b pr-12">
-          <SheetTitle>Library</SheetTitle>
-          <SheetDescription>Files shared by {name}</SheetDescription>
-        </SheetHeader>
-        {open ? (
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            <LibraryResults key={slug} slug={slug} />
-          </div>
-        ) : null}
-      </SheetContent>
-    </Sheet>
   );
 }
 

@@ -212,9 +212,11 @@ export async function previewSkill(
   };
 }
 
+/** `reenable: false` for a bot's request: see `installRegistryCapability`. */
 export async function installSkillForBot(
   input: InstallSkillInput,
-  deps: SkillsCatalogDeps = {}
+  deps: SkillsCatalogDeps = {},
+  options: { reenable?: boolean } = {}
 ): Promise<{
   row: CapabilityRow;
   capability: ReturnType<typeof publicCapability>;
@@ -236,7 +238,8 @@ export async function installSkillForBot(
   }
   const installed = await installRegistryCapability(
     preview.capability,
-    preview.origin
+    preview.origin,
+    options
   );
   return {
     capability: publicCapability(installed.row),

@@ -68,7 +68,8 @@ re-fetches and compares that digest, so a changed package must be reviewed again
 The upstream registry hash is retained as provenance.
 
 Repeated installation of the same revision reuses the existing row. Reinstalling
-a disabled copy of that revision enables it again. New revisions and locally
+a disabled copy of that revision from Settings enables it again; a bot's
+`install_skill` is refused instead, so only the user can turn a skill back on. New revisions and locally
 edited copies are never silently overwritten. Skill packages support up to 128
 supporting text files, within the existing content-size limits.
 

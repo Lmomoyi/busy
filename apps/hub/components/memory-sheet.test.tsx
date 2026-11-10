@@ -34,7 +34,7 @@ afterEach(() => {
 describe("memory sheet", () => {
   it("searches, adds, edits, and displays provenance", async () => {
     const updated = {
-      author: "mati",
+      author: "alex",
       createdAt: "2026-11-02T12:00:00.000Z",
       id: "memory-1",
       origin: "owner",

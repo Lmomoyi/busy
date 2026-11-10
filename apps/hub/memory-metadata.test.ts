@@ -13,7 +13,7 @@ import {
 const BOT_ID = "11111111-1111-4111-8111-111111111111";
 const BOT = "assistant";
 const owner: MemorySource = {
-  author: "mati",
+  author: "alex",
   messageId: null,
   origin: "owner",
   sessionId: null,
@@ -90,7 +90,7 @@ describe("memory metadata provenance", () => {
     const rows = await listMemoryMetadata(database, BOT);
     expect(rows).toHaveLength(2);
     expect(rows.find((row) => row.entryId === "0")).toMatchObject({
-      author: "mati",
+      author: "alex",
       origin: "owner",
       sourceStatus: "trusted_user",
     });
@@ -187,7 +187,7 @@ describe("memory metadata provenance", () => {
       text: "Bot fact",
     });
     expect(rows.find((row) => row.entryId === "1")).toMatchObject({
-      author: "mati",
+      author: "alex",
       sourceStatus: "trusted_user",
       text: "Keep owner source",
     });

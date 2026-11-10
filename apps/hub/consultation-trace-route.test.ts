@@ -62,7 +62,7 @@ beforeAll(async () => {
   databaseState.cookies.mockResolvedValue({
     get: vi.fn(() => ({ value: "session" })),
   });
-  databaseState.readSession.mockResolvedValue({ user: "mati" });
+  databaseState.readSession.mockResolvedValue({ user: "alex" });
   vi.doMock("@/lib/db", () => ({
     bots,
     consultations,

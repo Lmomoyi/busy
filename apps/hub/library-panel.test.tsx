@@ -60,7 +60,7 @@ beforeEach(() => {
     "GET",
     "/api/account",
     json({
-      account: { avatarUrl: null, name: "Matias Solina" },
+      account: { avatarUrl: null, name: "Alex Rivera" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         percentUsed: 12.5,

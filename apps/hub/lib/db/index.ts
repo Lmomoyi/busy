@@ -8,6 +8,7 @@ let instance: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
 // Lazy so `next build` doesn't need DATABASE_URL.
 // prepare: false because Supabase's transaction pooler (port 6543) has no prepared statements.
+// idle_timeout (seconds) so a resumed instance doesn't wake up holding sockets the pooler closed.
 export function db() {
   if (instance) {
     return instance;
@@ -16,7 +17,10 @@ export function db() {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required");
   }
-  instance = drizzle(postgres(databaseUrl, { prepare: false }), { schema });
+  instance = drizzle(
+    postgres(databaseUrl, { idle_timeout: 20, prepare: false }),
+    { schema }
+  );
   return instance;
 }
 

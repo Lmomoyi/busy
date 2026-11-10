@@ -1,10 +1,8 @@
 // @vitest-environment happy-dom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  AccountAiConnectionCard,
-  AccountAiMenuContent,
-} from "@/components/account-ai-connection";
+import { AccountAiConnectionCard } from "@/components/account-ai-connection";
+import { AccountAiMenuContent } from "@/components/account-ai-menu";
 import type { AiConnectionContextValue } from "@/components/ai-connection-provider";
 import type { AiProviderOption, AiSettingsSnapshot } from "@/lib/ai/types";
 
@@ -18,7 +16,7 @@ const ai = vi.hoisted(() => ({
 const account = vi.hoisted(() => ({
   state: {
     data: {
-      account: { avatarUrl: null, name: "Matias Solina", username: "mati" },
+      account: { avatarUrl: null, name: "Alex Rivera", username: "alex" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         limitUsd: 80,
@@ -124,7 +122,7 @@ beforeEach(() => {
   ai.connection = null;
   account.state = {
     data: {
-      account: { avatarUrl: null, name: "Matias Solina", username: "mati" },
+      account: { avatarUrl: null, name: "Alex Rivera", username: "alex" },
       tokenPass: {
         dashboardUrl: "https://vercel.com",
         limitUsd: 80,

@@ -83,7 +83,11 @@ test("keeps search and preview behind bot authentication and excludes internal r
   expect(await reviewed.json()).toEqual({ hash });
   const installed = await install(bodyRequest({ hash, id }));
   expect(installed.status).toBe(201);
-  expect(mocks.install).toHaveBeenCalledWith({ hash, id });
+  expect(mocks.install).toHaveBeenCalledWith(
+    { hash, id },
+    {},
+    { reenable: false }
+  );
   expect(await installed.json()).toEqual({
     capability: { id: "capability-id" },
     hash,

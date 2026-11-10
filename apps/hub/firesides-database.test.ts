@@ -251,6 +251,18 @@ describe("fireside persistence and authority", () => {
     );
     expect(await database.select().from(bots)).toHaveLength(1);
   });
+  it("lists a bot's firesides with the participants' names and without their state", async () => {
+    const fire = await insert();
+    expect(await store.listFiresides(bot().id)).toEqual([
+      {
+        createdAt: fire.createdAt,
+        id: fire.id,
+        names: Object.values(fire.state.participants).map((p) => p.name),
+        status: fire.status,
+      },
+    ]);
+    expect(await store.listFiresides(bot("guest").id)).toEqual([]);
+  });
   it("deduplicates a command despite JSONB property order and rejects reused ids with a different body", async () => {
     const fire = await insert();
     const command = {

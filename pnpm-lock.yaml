@@ -292,9 +292,6 @@ importers:
       cn:
         specifier: ^0.5.0
         version: 0.5.0
-      decode-named-character-reference:
-        specifier: 1.3.0
-        version: 1.3.0(patch_hash=57711bc39bf7593a7c8ce912d550c765f4243361fd719469c4dd63de352d9de3)
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@electric-sql/pglite@0.5.11)(@neondatabase/serverless@1.2.0)(@opentelemetry/api@1.9.0)(postgres@3.4.9)
@@ -355,9 +352,6 @@ importers:
       streamdown:
         specifier: 2.7.1
         version: 2.7.1(patch_hash=cbdbf1519703b0861ec331472f59cf0c42de8ee8c9fdce1c84cb03f19636fad8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@8.1.1)
-      tw-animate-css:
-        specifier: ^1.4.0
-        version: 1.4.0
       unified:
         specifier: 11.0.5
         version: 11.0.5
@@ -8111,9 +8105,6 @@ packages:
   turbo@2.11.10:
     resolution: {integrity: sha512-3GJYwig8ygEI89oaOZdduJX8/aw6O9eRPYHoIt6T3FZl9hkKjiyIspufJoVgqXihPoJu8M5CSV0DlZvzfohBCw==}
     hasBin: true
-
-  tw-animate-css@1.4.0:
-    resolution: {integrity: sha512-7bziOlRqH0hJx80h/3mbicLW7o8qLsH5+RaLR2t+OHM3D0JlWGODQKQ4cxbK7WlvmUxpcj6Kgu6EKqjrGFe3QQ==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -16827,8 +16818,6 @@ snapshots:
       '@turbo/linux-arm64': 2.11.10
       '@turbo/windows-64': 2.11.10
       '@turbo/windows-arm64': 2.11.10
-
-  tw-animate-css@1.4.0: {}
 
   type-check@0.4.0:
     dependencies:

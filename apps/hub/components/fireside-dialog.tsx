@@ -150,6 +150,11 @@ function FiresideRoom({
     let mounted = true;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
+      // A hidden tab only checks whether it is visible again, without asking the server.
+      if (document.hidden) {
+        timer = setTimeout(poll, 1200);
+        return;
+      }
       try {
         const value = await request(`/api/firesides/${id}`);
         if (

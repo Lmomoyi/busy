@@ -121,7 +121,7 @@ beforeEach(() => {
     if (path === "/api/account" && method === "GET") {
       return Promise.resolve(
         Response.json({
-          account: { avatarUrl: null, name: "Matias Solina" },
+          account: { avatarUrl: null, name: "Alex Rivera" },
           tokenPass: {
             dashboardUrl: "https://vercel.com",
             percentUsed: 12.5,
@@ -226,7 +226,7 @@ describe("AI connection", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Account menu: Matias Solina",
+        name: "Account menu: Alex Rivera",
       })
     );
     fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
@@ -254,7 +254,7 @@ describe("AI connection", () => {
       );
       fireEvent.click(
         await screen.findByRole("button", {
-          name: "Account menu: Matias Solina",
+          name: "Account menu: Alex Rivera",
         })
       );
       fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
@@ -306,7 +306,7 @@ describe("AI connection", () => {
       expect(screen.queryByText("12.5% used")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Close" }));
       fireEvent.click(
-        screen.getByRole("button", { name: "Account menu: Matias Solina" })
+        screen.getByRole("button", { name: "Account menu: Alex Rivera" })
       );
       const menu = screen.getByRole("menu");
       expect(menu.textContent).toContain(`Using ${label}`);

@@ -13,6 +13,9 @@ const AI_GATEWAY_API = "https://ai-gateway.vercel.sh/v1/report";
 // Team-wide allowance: https://vercel.com/docs/ai-gateway/token-pass/billing
 const TOKEN_PASS_CREDIT_USD = 80;
 const FETCH_TIMEOUT_MS = 5000;
+// The shell asks on every load, focus and minute; the profile and billing period rarely change.
+const PROFILE_TTL_MS = 60 * 60_000;
+const USAGE_TTL_MS = 60_000;
 
 type Source = Record<string, string | undefined>;
 
@@ -142,6 +145,35 @@ async function json<T>(
   }
 }
 
+// Per instance, and keyed by the Vercel token and team that own the data: another token or team
+// never reads these entries. Nothing here depends on the signed-in Busy user.
+const cache = new Map<string, { expires: number; value: unknown }>();
+
+export function clearAccountCache() {
+  cache.clear();
+}
+
+/** A null (failed or unusable) answer is never kept: the next request asks again. */
+async function cached<T>(
+  key: string,
+  ttlMs: number,
+  now: Date,
+  load: () => Promise<T | null>,
+  usable: (value: T) => boolean = () => true
+): Promise<T | null> {
+  const hit = cache.get(key);
+  if (hit && hit.expires > now.getTime() && usable(hit.value as T)) {
+    return hit.value as T;
+  }
+  const value = await load();
+  if (value === null) {
+    cache.delete(key);
+  } else {
+    cache.set(key, { expires: now.getTime() + ttlMs, value });
+  }
+  return value;
+}
+
 function oidcOwnerId(token: string): string | null {
   try {
     return text((decodeJwt(token) as Record<string, unknown>).owner_id);
@@ -232,12 +264,26 @@ export async function accountSnapshot(
     return fallback;
   }
 
+  const identity = `${teamId}:${token}`;
   const [vercelUser, rawTeam] = await Promise.all([
-    json<VercelUserResponse>(fetchImpl, `${VERCEL_API}/v2/user`, token),
-    json<VercelTeamResponse>(
-      fetchImpl,
-      `${VERCEL_API}/v2/teams/${encodeURIComponent(teamId)}`,
-      token
+    cached(`user:${identity}`, PROFILE_TTL_MS, now, () =>
+      json<VercelUserResponse>(fetchImpl, `${VERCEL_API}/v2/user`, token)
+    ),
+    cached(
+      `team:${identity}`,
+      PROFILE_TTL_MS,
+      now,
+      () =>
+        json<VercelTeamResponse>(
+          fetchImpl,
+          `${VERCEL_API}/v2/teams/${encodeURIComponent(teamId)}`,
+          token
+        ),
+      // A billing period that ended since it was read: ask for the new one.
+      (kept) => {
+        const end = dateFromMillis(kept.billing?.period?.end);
+        return !end || now < end;
+      }
     ),
   ]);
   // Never let a token's default/personal team silently supply the billing
@@ -282,13 +328,21 @@ export async function accountSnapshot(
   reportUrl.searchParams.set("group_by", "day");
   reportUrl.searchParams.set("date_part", "hour");
   reportUrl.searchParams.set("provider", "token-pass");
-  const bearer = reportToken
-    ? await reportToken().catch(() => null)
-    : await defaultReportToken(env, teamId);
-  const report = bearer
-    ? await json<ReportResponse>(fetchImpl, reportUrl.toString(), bearer)
-    : null;
-  const usage = reportUsage(report, periodStart, periodEnd);
+  // Only a usable report is kept; the bearer is resolved on a miss.
+  const usage = await cached(
+    `usage:${identity}:${reportUrl}`,
+    USAGE_TTL_MS,
+    now,
+    async () => {
+      const bearer = reportToken
+        ? await reportToken().catch(() => null)
+        : await defaultReportToken(env, teamId);
+      const report = bearer
+        ? await json<ReportResponse>(fetchImpl, reportUrl.toString(), bearer)
+        : null;
+      return reportUsage(report, periodStart, periodEnd);
+    }
+  );
   // A non-empty, valid current-period result also proves that Token Pass is
   // active when billing metadata is briefly behind the reporting stream.
   const active = tokenPassEnabled || (usage !== null && usage.currentRows > 0);

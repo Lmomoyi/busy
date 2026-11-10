@@ -67,7 +67,7 @@ beforeAll(async () => {
   databaseState.cookies.mockResolvedValue({
     get: vi.fn(() => ({ value: "session" })),
   });
-  databaseState.readSession.mockResolvedValue({ user: "mati" });
+  databaseState.readSession.mockResolvedValue({ user: "alex" });
   databaseState.getBot.mockResolvedValue({
     billing: "gateway",
     id: BOT_ID,
@@ -358,7 +358,7 @@ describe("message trace metadata route", () => {
     );
     expect(unauthorized.status).toBe(401);
 
-    databaseState.readSession.mockResolvedValue({ user: "mati" });
+    databaseState.readSession.mockResolvedValue({ user: "alex" });
     databaseState.getBot.mockResolvedValueOnce(null);
     const missing = await route.GET(
       new Request(

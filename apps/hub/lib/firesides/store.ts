@@ -267,9 +267,17 @@ export async function releaseFireside(id: string, token: string) {
     .set({ leaseToken: null, leaseUntil: null })
     .where(and(eq(firesides.id, id), eq(firesides.leaseToken, token)));
 }
+/** The list shows names only: the rest of the room's `state` stays in the database. */
 export function listFiresides(botId: string) {
   return db()
-    .select()
+    .select({
+      createdAt: firesides.createdAt,
+      id: firesides.id,
+      names: sql<
+        string[]
+      >`jsonb_path_query_array(${firesides.state}, '$.participants.*.name')`,
+      status: firesides.status,
+    })
     .from(firesides)
     .where(eq(firesides.botId, botId))
     .orderBy(desc(firesides.createdAt))

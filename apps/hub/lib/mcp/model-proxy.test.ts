@@ -179,6 +179,40 @@ describe("MCP model proxy", () => {
   });
 
   it("rejects a stale or mismatched injected session context before calling upstream", async () => {
+    const call = (resourceUri?: string) =>
+      proxyMcpRequest(
+        {
+          id: 3,
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            arguments: {
+              __busy: {
+                callId: "call-1",
+                connectionId: context.connectionId,
+                ...(resourceUri ? { resourceUri } : {}),
+                sessionId: "other-session",
+                toolName: "render",
+              },
+            },
+            name: "render",
+          },
+        },
+        context
+      );
+    const result = await call("ui://widget/dashboard");
+    expect(result.status).toBe(200);
+    expect(await body(result)).toMatchObject({
+      error: { code: -32_602 },
+    });
+    // Leaving the app's resource out does not skip the session binding.
+    expect(await body(await call())).toMatchObject({
+      error: { code: -32_409 },
+    });
+    expect(mocks.callTool).not.toHaveBeenCalled();
+  });
+
+  it("runs a plain tool from any session of the bot: only app results are bound to one", async () => {
     const result = await proxyMcpRequest(
       {
         id: 3,
@@ -189,19 +223,45 @@ describe("MCP model proxy", () => {
             __busy: {
               callId: "call-1",
               connectionId: context.connectionId,
-              sessionId: "other-session",
-              toolName: "render",
+              sessionId: "routine-session",
+              toolName: "read",
             },
+            query: "status",
           },
-          name: "render",
+          name: "read",
         },
       },
       context
     );
-    expect(result.status).toBe(200);
-    expect(await body(result)).toMatchObject({
-      error: { code: -32_602 },
+    expect(await body(result)).not.toHaveProperty("error");
+    expect(mocks.callTool).toHaveBeenCalledWith({
+      arguments: { query: "status" },
+      name: "read",
     });
+    expect(mocks.saveMcpAppResult).not.toHaveBeenCalled();
+  });
+
+  it("refuses a tool outside the allowlist before calling upstream", async () => {
+    const result = await proxyMcpRequest(
+      {
+        id: 3,
+        jsonrpc: "2.0",
+        method: "tools/call",
+        params: {
+          arguments: {
+            __busy: {
+              callId: "call-1",
+              connectionId: context.connectionId,
+              sessionId: context.botSessionId,
+              toolName: "delete_everything",
+            },
+          },
+          name: "delete_everything",
+        },
+      },
+      context
+    );
+    expect(await body(result)).toMatchObject({ error: { code: -32_003 } });
     expect(mocks.callTool).not.toHaveBeenCalled();
   });
 

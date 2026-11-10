@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as relay } from "./app/api/dev/bots/[slug]/[...path]/route";
 
 const mocks = vi.hoisted(() => ({
   signHubToken: vi.fn(),
   signRoutineToken: vi.fn(),
-  verifyHubRequest: vi.fn(),
+  verifyHubDeveloper: vi.fn(),
 }));
 
-vi.mock("@/lib/oidc", () => ({ verifyHubRequest: mocks.verifyHubRequest }));
+vi.mock("@/lib/oidc", () => ({ verifyHubDeveloper: mocks.verifyHubDeveloper }));
 vi.mock("@/lib/hub-token", () => ({
   isRoutineRunId: (value: unknown) =>
     typeof value === "string" && routineRunIdPattern.test(value),
@@ -19,7 +18,6 @@ vi.mock("@/lib/hub-token", () => ({
 
 const runId = "11111111-1111-4111-8111-111111111111";
 const bearerToken = "synthetic-development-oidc";
-const bearerHash = createHash("sha256").update(bearerToken).digest("hex");
 const routineRunIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const params = (slug = "lawyer", path = ["eve", "v1", "session", "s1"]) => ({
@@ -28,10 +26,8 @@ const params = (slug = "lawyer", path = ["eve", "v1", "session", "s1"]) => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubEnv("DEV_RELAY", "1");
-  vi.stubEnv("DEV_RELAY_UNTIL", "2099-01-01T00:00:00.000Z");
-  vi.stubEnv("DEV_RELAY_TOKEN_SHA256", bearerHash);
-  mocks.verifyHubRequest.mockResolvedValue(undefined);
+  vi.stubEnv("DEV_RELAY_USERS", "user-a");
+  mocks.verifyHubDeveloper.mockResolvedValue("user-a");
   mocks.signHubToken.mockResolvedValue("hub-token");
   mocks.signRoutineToken.mockResolvedValue("routine-token");
   vi.stubGlobal(
@@ -57,7 +53,7 @@ describe("development bot relay", () => {
 
     const response = await relay(req, params());
     expect(response.status).toBe(202);
-    expect(mocks.verifyHubRequest).toHaveBeenCalledWith(req, {
+    expect(mocks.verifyHubDeveloper).toHaveBeenCalledWith(req, {
       team: "mati-solina",
     });
     expect(mocks.signRoutineToken).toHaveBeenCalledWith("lawyer", runId);
@@ -111,7 +107,7 @@ describe("development bot relay", () => {
   });
 
   it("does not forward an unauthenticated request", async () => {
-    mocks.verifyHubRequest.mockRejectedValue(new Error("not authorized"));
+    mocks.verifyHubDeveloper.mockRejectedValue(new Error("not authorized"));
     const req = new Request(
       "http://hub.test/api/dev/bots/lawyer/eve/v1/session/s1",
       { headers: { Authorization: `Bearer ${bearerToken}` } }
@@ -122,35 +118,26 @@ describe("development bot relay", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("keeps an expired or misconfigured relay closed", async () => {
-    vi.stubEnv("DEV_RELAY_UNTIL", "2020-01-01T00:00:00.000Z");
-    const expired = await relay(
+  it("keeps a relay without registered users closed", async () => {
+    vi.stubEnv("DEV_RELAY_USERS", "");
+    const response = await relay(
       new Request("http://hub.test/api/dev/bots/lawyer/eve/v1/session/s1", {
         headers: { Authorization: `Bearer ${bearerToken}` },
       }),
       params()
     );
-    expect(expired.status).toBe(404);
-    vi.stubEnv("DEV_RELAY_UNTIL", "2099-01-01T00:00:00.000Z");
-    vi.stubEnv("DEV_RELAY_TOKEN_SHA256", "bad");
-    const malformed = await relay(
-      new Request("http://hub.test/api/dev/bots/lawyer/eve/v1/session/s1", {
-        headers: { Authorization: `Bearer ${bearerToken}` },
-      }),
-      params()
-    );
-    expect(malformed.status).toBe(404);
-    expect(mocks.verifyHubRequest).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
+    expect(mocks.verifyHubDeveloper).not.toHaveBeenCalled();
   });
 
-  it("rejects a bearer that does not match the configured token hash", async () => {
+  it("rejects a verified developer who is not registered", async () => {
+    mocks.verifyHubDeveloper.mockResolvedValue("user-b");
     const req = new Request(
       "http://hub.test/api/dev/bots/lawyer/eve/v1/session/s1",
-      { headers: { Authorization: "Bearer another-token" } }
+      { headers: { Authorization: `Bearer ${bearerToken}` } }
     );
     const response = await relay(req, params());
     expect(response.status).toBe(401);
-    expect(mocks.verifyHubRequest).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -56,6 +57,14 @@ function repository() {
   ]) {
     const destination = join(cwd, path);
     mkdirSync(dirname(destination), { recursive: true });
+    if (path === "apps/landing/package.json" && !existsSync(join(ROOT, path))) {
+      // The public repository is exported without apps/landing.
+      writeFileSync(
+        destination,
+        '{"name":"landing","scripts":{"build":"true","typecheck":"true"}}'
+      );
+      continue;
+    }
     copyFileSync(join(ROOT, path), destination);
   }
   write("apps/desktop/main.mjs");
@@ -238,7 +247,9 @@ test("main and manual execution always select every existing suite", () => {
     assert.equal(plan.hub, true);
     assert.equal(plan.desktop, true);
     assert.equal(plan.bot.length, 2);
-    assert.equal(plan.build.length, 3);
+    // The public repository is exported without apps/landing.
+    const landing = existsSync(join(ROOT, "apps/landing/package.json"));
+    assert.equal(plan.build.length, landing ? 3 : 2);
   }
 });
 

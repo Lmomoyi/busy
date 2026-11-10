@@ -7,8 +7,10 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
+  memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -85,35 +87,39 @@ async function upload(slug: string, file: File): Promise<string> {
 
 export function useAttachments(slug: string) {
   const [items, setItems] = useState<Attachment[]>([]);
-  const update = (localId: string, patch: Partial<Attachment>) =>
-    setItems((list) =>
-      list.map((a) => (a.localId === localId ? { ...a, ...patch } : a))
-    );
-  return {
-    add(files: File[]) {
-      for (const file of files.slice(
-        0,
-        Math.max(0, MAX_FILES - items.length)
-      )) {
-        const localId = crypto.randomUUID();
-        setItems((list) => [
-          ...list,
-          { localId, name: file.name, size: file.size, status: "uploading" },
-        ]);
-        upload(slug, file).then(
-          (fileId) => update(localId, { fileId, status: "ready" }),
-          () => update(localId, { status: "error" })
-        );
-      }
-    },
-    clear: () => setItems([]),
-    items,
-    remove: (localId: string) =>
-      setItems((list) => list.filter((a) => a.localId !== localId)),
-  };
+  // One object per change of the files: the chat pane renders on every streamed token, and a
+  // new object each time would make the composer render with it.
+  return useMemo(() => {
+    const update = (localId: string, patch: Partial<Attachment>) =>
+      setItems((list) =>
+        list.map((a) => (a.localId === localId ? { ...a, ...patch } : a))
+      );
+    return {
+      add(files: File[]) {
+        for (const file of files.slice(
+          0,
+          Math.max(0, MAX_FILES - items.length)
+        )) {
+          const localId = crypto.randomUUID();
+          setItems((list) => [
+            ...list,
+            { localId, name: file.name, size: file.size, status: "uploading" },
+          ]);
+          upload(slug, file).then(
+            (fileId) => update(localId, { fileId, status: "ready" }),
+            () => update(localId, { status: "error" })
+          );
+        }
+      },
+      clear: () => setItems([]),
+      items,
+      remove: (localId: string) =>
+        setItems((list) => list.filter((a) => a.localId !== localId)),
+    };
+  }, [items, slug]);
 }
 
-export function Composer({
+export const Composer = memo(function ChatComposer({
   slug,
   attachments,
   working,
@@ -397,4 +403,4 @@ export function Composer({
       </form>
     </div>
   );
-}
+});

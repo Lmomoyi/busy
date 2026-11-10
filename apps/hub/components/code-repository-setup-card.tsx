@@ -426,7 +426,8 @@ export function CodeRepositorySetupCard({
       }
     };
     refresh();
-    const timer = window.setInterval(refresh, 5000);
+    // A hidden tab doesn't poll; coming back to it refreshes at once.
+    const timer = window.setInterval(onFocus, 5000);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
     return () => {

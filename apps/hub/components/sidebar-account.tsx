@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useState } from "react";
-import { AccountAiMenuContent } from "@/components/account-ai-connection";
+import { preload } from "react-dom";
+import { AccountAiMenuContent, GROK_LOGO } from "@/components/account-ai-menu";
 import { AccountAvatar } from "@/components/account-avatar";
 import { useAccount } from "@/components/account-provider";
 import { MountOnOpen } from "@/components/mount-on-open";
@@ -36,9 +37,11 @@ const menuItemClass =
 
 export function SidebarAccount({
   onOpenMarketplace,
+  onPreloadMarketplace,
   collapsed = false,
 }: {
   onOpenMarketplace: () => void;
+  onPreloadMarketplace?: () => void;
   collapsed?: boolean;
 }) {
   const { data, loading } = useAccount();
@@ -50,6 +53,8 @@ export function SidebarAccount({
   const openSettings = useCallback(() => setSettings(true), []);
   const preloadSettings = useCallback((open: boolean) => {
     if (open) {
+      // The menu mounts its content on open; ask for the logo in the same tick.
+      preload(GROK_LOGO, { as: "image" });
       import("@/components/account-settings-dialog").catch(() => undefined);
     }
   }, []);
@@ -137,6 +142,8 @@ export function SidebarAccount({
             aria-label="Skills, plugins and MCPs"
             className="text-muted-foreground shrink-0"
             onClick={onOpenMarketplace}
+            onFocus={onPreloadMarketplace}
+            onPointerEnter={onPreloadMarketplace}
             size="icon-lg"
             title="Skills, plugins and MCPs"
             variant="outline"

@@ -17,7 +17,12 @@ export async function POST(req: Request) {
         400
       );
     }
-    const installed = await installSkillForBot(input.data);
+    // A bot can install, never undo the user's "off" switch.
+    const installed = await installSkillForBot(
+      input.data,
+      {},
+      { reenable: false }
+    );
     return skillsJson(
       {
         capability: installed.capability,

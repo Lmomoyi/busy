@@ -516,7 +516,7 @@ flags and experimental switches are documented next to their implementation.
 | `VERCEL_APP_CLIENT_ID` / `VERCEL_APP_CLIENT_SECRET` / `BUSY_VERCEL_USERS` | Optional Vercel login | Your OAuth application and explicit allowed users. |
 | `HISTORY_EMBEDDINGS_ENABLED` / `HISTORY_EMBEDDING_MODEL` / `HISTORY_EMBEDDING_URL` / `HISTORY_EMBEDDING_API_KEY` | Optional history embeddings | Configure the embedding path for your installation. |
 | `NEXT_PUBLIC_RUM` | Optional browser telemetry | Enable the included Speed Insights integration deliberately. |
-| `DEV_RELAY_URL` / `DEV_RELAY` / `DEV_RELAY_UNTIL` / `DEV_RELAY_TOKEN_SHA256` | Local work with deployed bots | Bounded development relay; see the local development guide. |
+| `DEV_RELAY_URL` / `DEV_RELAY_USERS` | Local work with deployed bots | Development relay for named Vercel users; see the local development guide. |
 | `BUSY_APP_VERSION` / `BUSY_APP_SHA256` | Optional native distribution | Published package version and archive hash. |
 | `BUSY_URL` | Desktop process | Hub origin loaded by the native client. |
 

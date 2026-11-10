@@ -103,6 +103,39 @@ describe("stream lifecycle", () => {
     );
   });
 
+  it("backs off while a stream keeps failing to open, and retries in a second once one opened", () => {
+    vi.useFakeTimers();
+    try {
+      const sources = fakeEventSource();
+      const store = createChatStore(
+        [
+          {
+            ...bot,
+            rows: [row(0, "turn.started", { turnId: "working" })],
+            status: "ready",
+          },
+        ],
+        { fetch: vi.fn(), open: sources.open }
+      );
+      store.select("assistant");
+      // No network, or an expired session: every attempt fails at once.
+      for (let second = 0; second < 60; second += 1) {
+        sources.last("assistant").fail();
+        vi.advanceTimersByTime(1000);
+      }
+      // 1, 2, 4, 8 and 16 seconds apart, then every 30: it used to be one a second.
+      expect(sources.opened()).toHaveLength(6);
+      vi.advanceTimersByTime(30_000);
+      expect(sources.opened()).toHaveLength(7);
+      sources.last("assistant").emit("open", {});
+      sources.last("assistant").fail();
+      vi.advanceTimersByTime(1000);
+      expect(sources.opened()).toHaveLength(8);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("closes live sources, blocks retries while paused and resumes only surviving conversations", () => {
     vi.useFakeTimers();
     try {

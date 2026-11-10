@@ -237,7 +237,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [ 1, 2 ]
+        shard: [ 1, 2, 3, 4 ]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -246,7 +246,7 @@ jobs:
           packages: '["hub"]'
       # Run every test; only partition the files, preserving Vitest isolation.
       - name: Run hub tests
-        run: pnpm turbo run test --filter=hub --force -- --maxWorkers=2 --shard=${{ matrix.shard }}/2
+        run: pnpm turbo run test --filter=hub --force -- --maxWorkers=2 --shard=${{ matrix.shard }}/4
 
   test-bot:
     needs: changes

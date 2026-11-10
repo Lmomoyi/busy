@@ -26,15 +26,16 @@ function snapshot(
 export async function getAiSettings(
   env: Record<string, string | undefined> = process.env
 ): Promise<AiSettingsSnapshot> {
-  const [row] = await db()
-    .select({
-      model: appAiSettings.model,
-      onboardingCompletedAt: appAiSettings.onboardingCompletedAt,
-      provider: appAiSettings.provider,
-    })
-    .from(appAiSettings)
-    .where(eq(appAiSettings.id, DEFAULT_ID));
-  const [connections, gatewayModels] = await Promise.all([
+  // One round trip: none of these reads waits on another.
+  const [[row], connections, gatewayModels] = await Promise.all([
+    db()
+      .select({
+        model: appAiSettings.model,
+        onboardingCompletedAt: appAiSettings.onboardingCompletedAt,
+        provider: appAiSettings.provider,
+      })
+      .from(appAiSettings)
+      .where(eq(appAiSettings.id, DEFAULT_ID)),
     listSubscriptionConnections(),
     listGatewayModels(),
   ]);

@@ -228,9 +228,13 @@ async function toolsCall(
     );
   }
   const busy = busyContext(args[BUSY_ARGUMENT]);
+  // The session binds an MCP App result to the chat that shows it. A plain tool saves nothing, so
+  // any session of this bot (a routine, a code task) may call it; the live metadata check below
+  // refuses an app tool that leaves `resourceUri` out to skip the binding.
   if (
     busy.connectionId !== context.connectionId ||
-    busy.sessionId !== context.botSessionId ||
+    (busy.resourceUri !== undefined &&
+      busy.sessionId !== context.botSessionId) ||
     busy.toolName !== name
   ) {
     throw new ProxyError(

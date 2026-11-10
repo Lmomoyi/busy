@@ -88,12 +88,12 @@ async function readEntries(
   slug: string,
   query = ""
 ): Promise<{ entries: MemoryEntryResponse[]; version: number | null }> {
-  const [row] = await db()
-    .select()
-    .from(memories)
-    .where(eq(memories.botSlug, slug));
+  // One round trip: the document and its metadata don't wait on each other.
+  const [[row], metadata] = await Promise.all([
+    db().select().from(memories).where(eq(memories.botSlug, slug)),
+    listMemoryMetadata(db(), slug),
+  ]);
   const parsed = row ? parseMemoryDoc(row.content) : [];
-  const metadata = await listMemoryMetadata(db(), slug);
   const byId = new Map(metadata.map((item) => [item.entryId, item]));
   const needle = query.trim().toLocaleLowerCase();
   const entries = parsed

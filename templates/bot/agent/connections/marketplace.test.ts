@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveMarketplaceConnections } from "./marketplace";
 
 const connection = (overrides: Record<string, unknown> = {}) => ({
@@ -19,6 +19,8 @@ const json = (value: unknown, status = 200) =>
     status,
   });
 
+// Every bot runs with HUB_URL; a reviewed connection resolves to the hub proxy under it.
+beforeEach(() => vi.stubEnv("HUB_URL", "https://busy.example/"));
 afterEach(() => vi.unstubAllEnvs());
 
 describe("MCP marketplace connection", () => {
@@ -47,20 +49,21 @@ describe("MCP marketplace connection", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("does not attach auth to public connections and brokers OAuth tokens on demand", async () => {
+  it("does not attach auth to public legacy connections and brokers their OAuth tokens on demand", async () => {
     const fetcher = vi.fn(async (path: string) => {
       await Promise.resolve();
       if (path === "/api/bot/mcp") {
         return json({
           connections: [
             connection({
+              aclMode: "legacy",
               auth: "none",
               catalogId: "context7",
               id: "context7-connection",
               name: "Context7",
               url: "https://mcp.context7.com/mcp",
             }),
-            connection(),
+            connection({ aclMode: "legacy" }),
           ],
         });
       }
@@ -196,6 +199,52 @@ describe("MCP marketplace connection", () => {
     ]);
     expect(names.every((name) => EVE_CONNECTION_NAME_PATTERN.test(name))).toBe(
       true
+    );
+  });
+
+  it("sends every reviewed connection through the hub proxy and never asks for its token", async () => {
+    vi.stubEnv("HUB_URL", "https://busy.example/");
+    const fetcher = vi.fn().mockImplementation(() =>
+      json({
+        connections: [
+          connection({
+            aclMode: "enforced",
+            allowedTools: ["read_issue"],
+            tools: [
+              {
+                description: "Read an issue",
+                name: "read_issue",
+                readOnlyHint: true,
+              },
+            ],
+          }),
+        ],
+      })
+    );
+    const definitions = await resolveMarketplaceConnections(fetcher);
+    const definition = definitions["mcp-linear"] as unknown as {
+      auth: { getToken: () => Promise<{ token: string }> };
+      toolCall: { providedArguments: { __busy: (ctx: unknown) => unknown } };
+      url: string;
+    };
+    expect(definition.url).toBe(
+      "https://busy.example/api/bot/mcp/linear-connection/proxy"
+    );
+    expect(
+      definition.toolCall.providedArguments.__busy({
+        callId: "call-1",
+        session: { id: "session-1" },
+        toolName: "read_issue",
+      })
+    ).toEqual({
+      callId: "call-1",
+      connectionId: "linear-connection",
+      sessionId: "session-1",
+      toolName: "read_issue",
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).not.toHaveBeenCalledWith(
+      "/api/bot/mcp/linear-connection/token"
     );
   });
 

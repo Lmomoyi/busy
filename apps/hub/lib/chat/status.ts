@@ -157,10 +157,24 @@ export const turnOpen = (p: Pick<TurnProjection, "state">): boolean =>
   p.state === "awaiting_input" ||
   p.state === "unknown";
 
-/** A turn started and hasn't settled, and its session hasn't ended. */
-export function isWorking(rows: readonly ClientRow[]): boolean {
-  return turnOpen(projectTurn(rows));
+/**
+ * Rows are replaced, never mutated, so a result holds for as long as its array does. Every
+ * store subscriber asks these on each streamed delta, which leaves the rows as they were.
+ */
+function perRows<T>(compute: (rows: readonly ClientRow[]) => T) {
+  const cache = new WeakMap<readonly ClientRow[], T>();
+  return (rows: readonly ClientRow[]): T => {
+    if (!cache.has(rows)) {
+      cache.set(rows, compute(rows));
+    }
+    return cache.get(rows) as T;
+  };
 }
+
+/** A turn started and hasn't settled, and its session hasn't ended. */
+export const isWorking: (rows: readonly ClientRow[]) => boolean = perRows(
+  (rows) => turnOpen(projectTurn(rows))
+);
 
 const PEER_CALL = /^peer-(?<slot>\d+)$/u;
 
@@ -180,7 +194,9 @@ export function deliverySettled(
 }
 
 /** Consultations this bot's turn is waiting on: callId → directory slot of each unsettled `peer-N` call. */
-export function openPeerCalls(rows: readonly ClientRow[]): Map<string, number> {
+export const openPeerCalls: (
+  rows: readonly ClientRow[]
+) => ReadonlyMap<string, number> = perRows((rows) => {
   const open = new Map<string, number>();
   for (const r of rows) {
     const d = r.data.data ?? {};
@@ -198,7 +214,7 @@ export function openPeerCalls(rows: readonly ClientRow[]): Map<string, number> {
     }
   }
   return open;
-}
+});
 
 export type WaitStage = "sending" | "received" | "admitted" | "thinking";
 

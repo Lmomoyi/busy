@@ -33,7 +33,7 @@ beforeEach(() => {
   h.cookies.mockResolvedValue({
     get: vi.fn(() => ({ value: "session-token" })),
   });
-  h.readSession.mockResolvedValue({ user: "mati" });
+  h.readSession.mockResolvedValue({ user: "alex" });
   h.parseLibraryQuery.mockReturnValue(query);
   h.listLibraryFiles.mockResolvedValue(result);
 });

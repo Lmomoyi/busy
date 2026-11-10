@@ -239,4 +239,25 @@ describe("chat events route contract", () => {
       expect.objectContaining({ errorCode: "Error" })
     );
   });
+
+  it("rejects a cursor that is not a line number before opening the stream", async () => {
+    const { GET } = await import("./app/api/bots/[slug]/events/route");
+    const params = { params: Promise.resolve({ slug: bot.slug }) };
+    for (const after of ["abc", "NaN", "Infinity", "1.5", "1e400"]) {
+      // biome-ignore lint/performance/noAwaitInLoops: each cursor is its own request.
+      const response = await GET(
+        new Request(
+          `https://busy.test/api/bots/${bot.slug}/events?session=${sessionId}&after=${after}`
+        ),
+        params
+      );
+      expect(response.status).toBe(400);
+      expect(response.headers.get("content-type")).not.toContain(
+        "text/event-stream"
+      );
+    }
+    expect(mocks.cursorOf).not.toHaveBeenCalled();
+    expect(mocks.persistedEvents).not.toHaveBeenCalled();
+    expect(mocks.readStream).not.toHaveBeenCalled();
+  });
 });

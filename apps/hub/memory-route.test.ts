@@ -50,7 +50,7 @@ beforeAll(async () => {
     cookies: async () => ({ get: () => ({ value: "session" }) }),
   }));
   vi.doMock("@/lib/auth/session", () => ({
-    readSession: vi.fn().mockResolvedValue({ user: "mati" }),
+    readSession: vi.fn().mockResolvedValue({ user: "alex" }),
     SESSION_COOKIE: "busy_session",
   }));
   vi.doMock("@/lib/bots/service", () => ({
@@ -85,7 +85,7 @@ describe("editable memory routes", () => {
     expect(added.status).toBe(200);
     expect(await added.json()).toMatchObject({
       entries: [
-        { author: "mati", id: "0", origin: "owner", text: "Prefers Excel" },
+        { author: "alex", id: "0", origin: "owner", text: "Prefers Excel" },
       ],
       version: 1,
     });

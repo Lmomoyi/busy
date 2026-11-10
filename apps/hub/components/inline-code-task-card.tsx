@@ -59,6 +59,11 @@ function TaskCardState({ slug, taskId }: { slug: string; taskId: string }) {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const load = async () => {
+      // A hidden tab only checks whether it is visible again, without asking the server.
+      if (document.hidden) {
+        timer = setTimeout(() => load().catch(() => undefined), 5000);
+        return;
+      }
       let delay: number | null = null;
       try {
         const next = await readTask(slug, taskId, controller.signal);

@@ -9,15 +9,11 @@ cd apps/hub
 vercel env pull .env.local --environment=development --yes
 ```
 
-Local connections use `DEV_RELAY_URL`, pointing to your deployed hub, and the refreshed `VERCEL_OIDC_TOKEN`. Your bot and Live relays share a registered development grant:
+Local connections use `DEV_RELAY_URL`, pointing to your deployed hub, and the `VERCEL_OIDC_TOKEN` of the development environment. The deployed hub's bot and Live relays stay closed unless it has `DEV_RELAY_USERS`: a comma-separated list of the Vercel user ids allowed through.
 
-- `DEV_RELAY=1` explicitly enables the grant.
-- `DEV_RELAY_UNTIL` must be a future ISO timestamp, bounded by the development token's expiry.
-- `DEV_RELAY_TOKEN_SHA256` is the SHA-256 fingerprint of that exact development bearer token, never the token itself.
+The relay validates the token's Vercel signature, expiry, configured team and the fixed `busy-hub` project subject used by the hub/bot protocol, requires it to be a development token, and matches its `user_id` claim against the list. `busy-hub` is the protocol issuer; the Vercel team is your `VERCEL_TEAM_SLUG`. The grant follows the person rather than one token, so it survives the token's rotation every few hours; another team member's otherwise-valid token is refused until their id is listed. Without the list the relay answers 404; a missing, invalid or unlisted credential gets 401.
 
-The relay validates the token's Vercel signature, expiry, configured team and the fixed `busy-hub` project subject used by the hub/bot protocol. `busy-hub` is the protocol issuer; the Vercel team is your `VERCEL_TEAM_SLUG`. Another team member's otherwise-valid hub token does not match the registered fingerprint. Missing or expired configuration closes the relay with 404; missing, mismatched or invalid credentials return 401. Project environment changes require a hub redeployment to take effect.
-
-When a development token is renewed, its fingerprint and grant expiry must also be renewed on your hub. Keep the `.env.local` file private and restart the local dev server after refreshing it. Do not print bearer tokens or pull the deployed signing key as a workaround.
+Your user id is the `user_id` claim of a pulled development token, and also the `id` that `vercel api /v2/user` prints. Set `DEV_RELAY_USERS` on the deployed hub once and redeploy it; remove it to close the relay. Keep the `.env.local` file private. Do not print bearer tokens or pull the deployed signing key as a workaround.
 
 The local hub reads the shared database, but its `SESSION_SECRET` is intentionally different from any deployed environment. OAuth subscription grants are encrypted with that secret, so a grant connected from localhost cannot be read by a deployed hub. Connect providers from the `HUB_URL` environment you intend to use; do not overwrite a deployed grant from localhost or change the deployed secret to make a local grant readable.
 

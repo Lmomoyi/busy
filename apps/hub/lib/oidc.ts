@@ -33,7 +33,12 @@ const jwksFor = (team: string) => {
 async function verifiedClaims(
   req: Request,
   opts: { team: string; jwks?: JWTVerifyGetKey }
-): Promise<{ environment: unknown; projectId: unknown; sub: string }> {
+): Promise<{
+  environment: unknown;
+  projectId: unknown;
+  sub: string;
+  userId: unknown;
+}> {
   const token = req.headers.get("authorization")?.replace(BEARER_PREFIX, "");
   if (!token) {
     throw new Error("missing bearer token");
@@ -47,24 +52,29 @@ async function verifiedClaims(
     environment: payload.environment,
     projectId: payload.project_id,
     sub: payload.sub ?? "",
+    userId: payload.user_id,
   };
 }
 
-async function verifiedSubject(
+/**
+ * A person's development token for the hub project (`vercel env pull`, or the local refresh in
+ * @vercel/oidc). Returns their Vercel user id: stable across the token's rotation every few hours.
+ */
+export async function verifyHubDeveloper(
   req: Request,
   opts: { team: string; jwks?: JWTVerifyGetKey }
 ): Promise<string> {
-  return (await verifiedClaims(req, opts)).sub;
-}
-
-/** Someone holding a busy-hub OIDC token: the hub itself or a team member's `vercel env pull`. */
-export async function verifyHubRequest(
-  req: Request,
-  opts: { team: string; jwks?: JWTVerifyGetKey }
-): Promise<void> {
-  if (!isHubSubject(await verifiedSubject(req, opts), opts.team)) {
+  const claims = await verifiedClaims(req, opts);
+  if (!isHubSubject(claims.sub, opts.team)) {
     throw new Error("caller is not the hub");
   }
+  if (claims.environment !== "development") {
+    throw new Error("caller is not a development token");
+  }
+  if (typeof claims.userId !== "string" || !claims.userId) {
+    throw new Error("caller has no user id");
+  }
+  return claims.userId;
 }
 
 /**

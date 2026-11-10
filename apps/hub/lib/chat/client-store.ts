@@ -264,6 +264,8 @@ export function createChatStore(
   const serverState = state;
   const listeners = new Set<() => void>();
   const streams = new Map<string, EventSource>();
+  // Consecutive failed connections per bot, cleared when a stream opens.
+  const streamFailures = new Map<string, number>();
   const streamGeneration = new Map<string, number>();
   const followedStreams = new Set<string>();
   // A session announcement from SSE is followed by a bounded snapshot once
@@ -494,6 +496,9 @@ export function createChatStore(
         onProgress(slug, JSON.parse((e as MessageEvent).data));
       }
     });
+    es.addEventListener("open", () => {
+      streamFailures.delete(slug);
+    });
     // The server ends each stream within 5 minutes; reconnect from the last line we have.
     es.onerror = () => {
       if (streams.get(slug) !== es) {
@@ -501,6 +506,10 @@ export function createChatStore(
       }
       es.close();
       streams.delete(slug);
+      // A stream that opened and later ended retries in a second. One that never opens (the hub is
+      // down, the session expired, no network) doubles its wait up to 30 seconds.
+      const failures = streamFailures.get(slug) ?? 0;
+      streamFailures.set(slug, failures + 1);
       const expectedSession = state.bots[slug]?.sessionId ?? null;
       const reconnect = () => {
         const current = state.bots[slug];
@@ -536,7 +545,7 @@ export function createChatStore(
         return;
       }
       // Re-checked when the timer fires: the user may have moved to another bot within the second.
-      setTimeout(reconnect, 1000);
+      setTimeout(reconnect, Math.min(1000 * 2 ** failures, 30_000));
     };
   }
 

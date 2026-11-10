@@ -355,6 +355,48 @@ describe("chat startup history budget", () => {
     expect(result[1]?.rows).toEqual([]);
     expect(queries.length).toBeLessThanOrEqual(3);
   });
+  it("reads only the bot columns the page shows", async () => {
+    await client.exec(
+      "UPDATE bots SET instructions = 'Long private instructions', error = 'Deploy failed' WHERE slug = 'beta'"
+    );
+    try {
+      queries = [];
+      const result = await initial.initialData("alpha");
+      expect(queries.join("\n")).not.toContain("instructions");
+      expect(Object.keys(result[1] ?? {}).sort()).toEqual([
+        "avatar",
+        "billing",
+        "consults",
+        "description",
+        "error",
+        "fast",
+        "historyCursor",
+        "historyHasMore",
+        "model",
+        "name",
+        "past",
+        "pastLoaded",
+        "resumeAfter",
+        "rows",
+        "sessionId",
+        "slug",
+        "snapshotLoaded",
+        "status",
+      ]);
+      expect(result[1]).toMatchObject({
+        billing: "gateway",
+        // Still sanitized, as publicBot does.
+        error: "Busy could not deploy this bot.",
+        name: "Beta",
+        slug: "beta",
+        status: "ready",
+      });
+    } finally {
+      await client.exec(
+        "UPDATE bots SET instructions = '', error = NULL WHERE slug = 'beta'"
+      );
+    }
+  });
   it("retrieves archived user sessions on demand without including consultation sessions", async () => {
     const result = await initial.pastSessions(
       "11111111-1111-4111-8111-111111111111",

@@ -193,6 +193,23 @@ describe("capability store", () => {
     ).rejects.toThrow("local edits");
   });
 
+  it("keeps a disabled registry revision off when the reinstall comes from a bot", async () => {
+    const installed = await capabilities.installRegistryCapability(
+      { ...input, name: "research-abcdef1234" },
+      origin
+    );
+    await capabilities.updateCapability(installed.row.id, { enabled: false });
+    await expect(
+      capabilities.installRegistryCapability(
+        { ...input, name: "research-abcdef1234" },
+        origin,
+        { reenable: false }
+      )
+    ).rejects.toThrow("turned off");
+    const [row] = await capabilities.listCapabilities();
+    expect(row?.enabled).toBe(false);
+  });
+
   it("rejects re-enabling a 33rd capability", async () => {
     // biome-ignore lint/style/noIncrementDecrement: fixture counter is intentionally local to the test scenario.
     for (let index = 0; index < 32; index++) {

@@ -20,7 +20,7 @@ vi.mock("@/components/capabilities-panel", () => ({
 }));
 
 const account = {
-  account: { avatarUrl: null, name: "Matias Solina" },
+  account: { avatarUrl: null, name: "Alex Rivera" },
   tokenPass: {
     dashboardUrl: "https://vercel.com",
     percentUsed: 12.5,
@@ -136,7 +136,7 @@ test("keeps the same app marketplace endpoint when switching bots", async () => 
 test("keeps Skills, Plugins and MCPs as separate Settings sections", async () => {
   render(<ChatApp initial={[]} />);
   fireEvent.click(
-    await screen.findByRole("button", { name: "Account menu: Matias Solina" })
+    await screen.findByRole("button", { name: "Account menu: Alex Rivera" })
   );
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
 

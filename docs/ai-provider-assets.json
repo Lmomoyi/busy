@@ -30,10 +30,10 @@
     },
     {
       "provider": "chatgpt",
-      "file": "apps/hub/public/ai-providers/chatgpt-inter-medium.ttf",
+      "file": "apps/hub/public/ai-providers/chatgpt-inter-medium.woff2",
       "source": "https://developers.openai.com/fonts/siwc-inter/Inter-Medium.ttf",
       "sourcePage": "https://developers.openai.com/siwc/website",
-      "note": "Official button example font. The ChatGPT button uses a 45px height, 12px gap, 21px logo, and 15px medium typography. Corners follow Busy's square interface."
+      "note": "Official button example font, subset to Basic Latin, Latin-1 and common punctuation and repacked as WOFF2 with fontTools pyftsubset; outlines unchanged. The ChatGPT button uses a 45px height, 12px gap, 21px logo, and 15px medium typography. Corners follow Busy's square interface."
     },
     {
       "provider": "vercel",

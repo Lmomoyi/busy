@@ -51,6 +51,10 @@ export async function GET(req: Request, { params }: Ctx) {
   const sessionChanged =
     requestedSession !== null && requestedSession !== sessionId;
   const after = sessionChanged ? -1 : Number(query.get("after") ?? -1);
+  // A cursor that isn't a line number would fail inside the stream, and the client would reconnect forever.
+  if (!Number.isSafeInteger(after)) {
+    return new Response("invalid after", { status: 400 });
+  }
   const requestId = requestIdOf(req);
 
   return sseResponse(req, async (send, closed, signal) => {

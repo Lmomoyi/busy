@@ -11,7 +11,6 @@ import {
   useState,
 } from "react";
 import { BotBooting } from "@/components/bot-avatar";
-import { MountOnOpen } from "@/components/mount-on-open";
 import { TeachControl } from "@/components/teach-control";
 import { Button } from "@/components/ui/button";
 import {
@@ -442,11 +441,9 @@ export function LiveView({
       <Dialog onOpenChange={handleDialogChange} open={open !== null}>
         {/* Full screen on a phone, upright or sideways (the remote screen gets the space); a card where there's room.
             The card's width also follows the window's height, so the 16:10 screen plus ~10rem of header and margins fits without scrolling. */}
-        <DialogContent
-          className="roomy:h-auto roomy:max-h-[calc(100dvh-2rem)] roomy:w-full roomy:max-w-[min(1120px,calc(100%-4rem),calc((100dvh-10rem)*1.6+2rem))] roomy:rounded-xl roomy:p-4 flex h-dvh max-h-dvh w-screen max-w-none flex-col gap-3 rounded-none p-3 sm:max-w-none"
-          keepMounted
-        >
-          <MountOnOpen open={open !== null}>{screen}</MountOnOpen>
+        <DialogContent className="roomy:h-auto roomy:max-h-[calc(100dvh-2rem)] roomy:w-full roomy:max-w-[min(1120px,calc(100%-4rem),calc((100dvh-10rem)*1.6+2rem))] roomy:rounded-xl roomy:p-4 flex h-dvh max-h-dvh w-screen max-w-none flex-col gap-3 rounded-none p-3 sm:max-w-none">
+          {/* Mounted only while open: closing ends the VNC session, and a hidden pane coming back never reopens the computer. */}
+          {screen}
         </DialogContent>
       </Dialog>
     </>

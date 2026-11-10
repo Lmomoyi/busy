@@ -21,6 +21,11 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const after = Number(new URL(req.url).searchParams.get("after") ?? -1);
+  // A cursor that isn't a line number would fail inside the stream, and the client would reconnect forever.
+  if (!Number.isSafeInteger(after)) {
+    return new Response("invalid after", { status: 400 });
+  }
   const id = z.uuid().safeParse((await params).id);
   const [c] = id.success
     ? await db()
@@ -32,11 +37,16 @@ export async function GET(
     return new Response("not found", { status: 404 });
   }
   const child = c.childSessionId;
-  const [from] = await db().select().from(bots).where(eq(bots.id, c.fromBotId));
-  const [to] = c.toBotId
-    ? await db().select().from(bots).where(eq(bots.id, c.toBotId))
-    : [];
-  const after = Number(new URL(req.url).searchParams.get("after") ?? -1);
+  // One round trip. `from` stays a whole row: the saver takes it.
+  const [[from], [to]] = await Promise.all([
+    db().select().from(bots).where(eq(bots.id, c.fromBotId)),
+    c.toBotId
+      ? db()
+          .select({ billing: bots.billing })
+          .from(bots)
+          .where(eq(bots.id, c.toBotId))
+      : [],
+  ]);
   const requestId = requestIdOf(req);
 
   return sseResponse(req, async (send, closed, signal) => {

@@ -135,10 +135,15 @@ export async function changeCapabilityCatalog(
   });
 }
 
-/** Install a skills.sh revision atomically in the shared app catalog. */
+/**
+ * Install a skills.sh revision atomically in the shared app catalog. Reinstalling a revision the
+ * user turned off turns it back on only for an account request: a bot passes `reenable: false`,
+ * because its token proves which bot is calling, not that the user changed their mind.
+ */
 export async function installRegistryCapability(
   input: CapabilityInput,
-  origin: SkillOrigin
+  origin: SkillOrigin,
+  { reenable = true }: { reenable?: boolean } = {}
 ): Promise<{ row: CapabilityRow; reused: boolean }> {
   return await db().transaction(async (tx) => {
     await lockApp(tx);
@@ -159,22 +164,15 @@ export async function installRegistryCapability(
           "This skill has local edits; review them before reinstalling."
         );
       }
-      if (!existing.enabled) {
-        await ensureEnabledCapacity(tx, {
-          id: existing.id,
-          skills: parseCapabilitySkills(existing.skills),
-        });
-        const [row] = await tx
-          .update(appCapabilities)
-          .set({ enabled: true, updatedAt: new Date() })
-          .where(eq(appCapabilities.id, existing.id))
-          .returning();
-        if (!row) {
-          throw new Error("Capability could not be re-enabled.");
-        }
-        return { reused: true, row };
+      if (existing.enabled) {
+        return { reused: true, row: existing };
       }
-      return { reused: true, row: existing };
+      if (!reenable) {
+        throw new CapabilityConflictError(
+          "This skill was turned off in Settings > Skills. Only the user can turn it back on there."
+        );
+      }
+      return { reused: true, row: await enableCapability(tx, existing) };
     }
     const id = randomUUID();
     await ensureEnabledCapacity(tx, { id, skills: input.skills });
@@ -327,6 +325,25 @@ async function selectCapability(
 // even when several bots make model calls concurrently.
 async function lockApp(tx: DbTransaction) {
   await tx.execute(sql`select pg_advisory_xact_lock(183746592)`);
+}
+
+async function enableCapability(
+  tx: DbTransaction,
+  existing: CapabilityRow
+): Promise<CapabilityRow> {
+  await ensureEnabledCapacity(tx, {
+    id: existing.id,
+    skills: parseCapabilitySkills(existing.skills),
+  });
+  const [row] = await tx
+    .update(appCapabilities)
+    .set({ enabled: true, updatedAt: new Date() })
+    .where(eq(appCapabilities.id, existing.id))
+    .returning();
+  if (!row) {
+    throw new Error("Capability could not be re-enabled.");
+  }
+  return row;
 }
 
 async function ensureEnabledCapacity(

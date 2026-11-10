@@ -3,7 +3,6 @@ import {
   asc,
   desc,
   eq,
-  getTableColumns,
   inArray,
   isNotNull,
   ne,
@@ -12,7 +11,8 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { type PublicBot, publicBot } from "../bots/service";
+import { sanitizeAiMessage } from "../ai/errors";
+import type { PublicBot } from "../bots/service";
 import { bots, consultations, db, events, messages } from "../db";
 import { span } from "../trace";
 import type { HistoryCursor, PastCursor, PastSession } from "./client-store";
@@ -742,7 +742,8 @@ export async function pastSessionsPage(
   };
 }
 
-export type InitialBot = PublicBot & {
+// No `instructions` (up to 8 KB a bot): the edit form loads them when it opens.
+export type InitialBot = Omit<PublicBot, "createdAt" | "instructions"> & {
   historyCursor: HistoryCursor | null;
   historyHasMore: boolean;
   resumeAfter: number | null;
@@ -776,7 +777,20 @@ export async function initialData(selected?: string): Promise<InitialBot[]> {
   const [all, current, consults] = await Promise.all([
     span("chat.initial.bots", () =>
       db()
-        .select({ ...getTableColumns(bots), hasArchive })
+        .select({
+          avatar: bots.avatar,
+          billing: bots.billing,
+          description: bots.description,
+          error: bots.error,
+          fast: bots.fast,
+          hasArchive,
+          id: bots.id,
+          model: bots.model,
+          name: bots.name,
+          sessionId: bots.sessionId,
+          slug: bots.slug,
+          status: bots.status,
+        })
         .from(bots)
         .where(sql`${bots.deletionState} is distinct from 'deleting'`)
         .orderBy(asc(bots.createdAt), asc(bots.id))
@@ -807,14 +821,20 @@ export async function initialData(selected?: string): Promise<InitialBot[]> {
       )
       .map(compactRow);
     return {
-      ...publicBot(b),
+      avatar: b.avatar,
+      billing: b.billing,
       consults: consults.get(b.id) ?? [],
+      description: b.description,
+      error: sanitizeAiMessage(b.error),
+      fast: b.fast,
       historyCursor: snapshotLoaded
         ? (current.history.get(b.sessionId ?? "")?.cursor ?? null)
         : null,
       historyHasMore: snapshotLoaded
         ? (current.history.get(b.sessionId ?? "")?.hasMore ?? false)
         : false,
+      model: b.model,
+      name: b.name,
       past: [],
       // A bot with no archived session has nothing earlier to offer.
       pastLoaded: !b.hasArchive,
@@ -823,7 +843,9 @@ export async function initialData(selected?: string): Promise<InitialBot[]> {
         : null,
       rows: snapshotLoaded ? prepareMarkdownRows(currentRowsForBot) : preview,
       sessionId: b.sessionId,
+      slug: b.slug,
       snapshotLoaded,
+      status: b.status,
     };
   });
 }

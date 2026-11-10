@@ -86,6 +86,7 @@ export function McpAppFrame({
   });
   const hostContextRef = useRef(hostContext);
   const bridgeRef = useRef<AppBridge | null>(null);
+  const served = useRef<boolean>(false);
   const inputRef = useRef(input);
   const resultRef = useRef(result);
   const onErrorRef = useRef(onError);
@@ -115,9 +116,16 @@ export function McpAppFrame({
   useEffect(() => {
     const iframe = iframeRef.current;
     const targetWindow = iframe?.contentWindow;
-    if (!targetWindow) {
+    if (!(iframe && targetWindow)) {
       return;
     }
+    // The proxy announces itself only until it is handed a resource, and the app inside
+    // initializes once. A pane hidden and shown again builds a new bridge here, so the
+    // proxy starts over for it; otherwise the bridge waits for a handshake that already happened.
+    if (served.current) {
+      iframe.src = sandboxUrl;
+    }
+    served.current = true;
 
     const hostInfo: Implementation = { name: "Busy", version: "1.0.0" };
     const capabilities: McpUiHostCapabilities = {
@@ -172,7 +180,7 @@ export function McpAppFrame({
       bridge.teardownResource({}).catch(() => undefined);
       transport.close().catch(() => undefined);
     };
-  }, [resource.html, resource.meta]);
+  }, [resource.html, resource.meta, sandboxUrl]);
 
   useEffect(() => {
     bridgeRef.current?.setHostContext(hostContext);

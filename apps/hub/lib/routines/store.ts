@@ -94,24 +94,25 @@ async function latestRun(id: string): Promise<RoutineRunRow | undefined> {
 }
 
 export async function listRoutines(botId: string): Promise<PublicRoutine[]> {
-  const rows = await db()
-    .select()
-    .from(routines)
-    .where(and(eq(routines.botId, botId), isNull(routines.deletedAt)))
-    .orderBy(asc(routines.createdAt), asc(routines.id));
-  if (!rows.length) {
-    return [];
-  }
-  const runs = await db()
-    .selectDistinctOn([routineRuns.routineId])
-    .from(routineRuns)
-    .where(
-      inArray(
-        routineRuns.routineId,
-        rows.map((r) => r.id)
+  const listed = and(eq(routines.botId, botId), isNull(routines.deletedAt));
+  // The runs query finds its routines in SQL, so both reads share one round trip.
+  const [rows, runs] = await Promise.all([
+    db()
+      .select()
+      .from(routines)
+      .where(listed)
+      .orderBy(asc(routines.createdAt), asc(routines.id)),
+    db()
+      .selectDistinctOn([routineRuns.routineId])
+      .from(routineRuns)
+      .where(
+        inArray(
+          routineRuns.routineId,
+          db().select({ id: routines.id }).from(routines).where(listed)
+        )
       )
-    )
-    .orderBy(routineRuns.routineId, desc(routineRuns.scheduledFor));
+      .orderBy(routineRuns.routineId, desc(routineRuns.scheduledFor)),
+  ]);
   const byRoutine = new Map(runs.map((r) => [r.routineId, r]));
   return rows.map((r) => publicRoutine(r, byRoutine.get(r.id)));
 }
